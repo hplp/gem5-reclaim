@@ -7,3 +7,6 @@
 [submodule "lib/hotspot"]
 	path = lib/hotspot
 	url = git@github.com:meltonbw/hotspot.git
+[submodule "lib/mcpat-riscv"]
+	path = lib/mcpat-riscv
+	url = git@github.com:meltonbw/mcpat-riscv.git

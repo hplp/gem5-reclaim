@@ -4,3 +4,6 @@
 [submodule "lib/voltspot"]
 	path = lib/voltspot
 	url = git@github.com:meltonbw/voltspot.git
+[submodule "lib/hotspot"]
+	path = lib/hotspot
+	url = git@github.com:meltonbw/hotspot.git

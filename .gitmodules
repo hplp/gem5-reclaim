@@ -1,6 +1,3 @@
-[submodule "lib/gem5-riscv"]
-	path = lib/gem5-riscv
-	url = https://github.com/hplp/gem5-riscv.git
 [submodule "lib/voltspot"]
 	path = lib/voltspot
 	url = git@github.com:meltonbw/voltspot.git

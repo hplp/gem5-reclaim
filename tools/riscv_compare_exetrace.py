@@ -147,7 +147,7 @@ if __name__ == "__main__":
         reg = "reg 0"
         
 
-        spike = pexpect.spawn("spike -d pk " + args.spike_exe)
+        spike = pexpect.spawn("spike -d pk " + args.spike_exe + " 1> /dev/null")
         spike.setecho(False)
         try:
             gem5Line = 0

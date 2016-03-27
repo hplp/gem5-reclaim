@@ -9,7 +9,8 @@ pcStr = r"(0x[0-9a-fA-F]{16})"
 instStr = r"\((0x[0-9a-fA-F]{8})\)"
 
 gem5Pattern = re.compile(r"^\s*\d+:\s*global:\s*" + pcStr + r" " + instStr + r":\s*(.*)$")
-instRegPattern = re.compile(r"x(\d+) \((0x[0-9a-fA-F]+)\)")
+intRegPattern = re.compile(r"x(\d+) \((0x[0-9a-fA-F]+)\)")
+floatRegPattern = re.compile(r"f(\d+) \((-?\d+(?:\.\d+)?)\)")
 
 spikePattern = re.compile(r"^core\s+\d+:\s*" + pcStr + r" " + instStr + r"\s*(.*)$")
 spikeTrapPattern = re.compile(r"^core\s+\d+:\s*exception trap_\w+, epc " + pcStr + r"$")
@@ -65,14 +66,16 @@ def find_spike_instr(f, lineno=0):
 def advance_spike(pc):
     return "until pc 0 " + hex(pc)
 
-def gem5_find_regs(inst):
+def gem5_find_int_regs(inst):
     regs = {}
-    for match in instRegPattern.finditer(inst):
-        ind = int(match.group(1))
-        val = match.group(2)
-#        if re.match("[9a-fA-F]", val[2]):
-#            val = "0xFFFFFFFF" + val[2:]
-        regs[ind] = int(val, 0)
+    for match in intRegPattern.finditer(inst):
+        regs[int(match.group(1))] = int(match.group(2), 0)
+    return regs
+
+def gem5_find_float_regs(inst):
+    regs = {}
+    for match in floatRegPattern.finditer(inst):
+        regs[int(match.group(1))] = float(match.group(2))
     return regs
 
 def spike_find_reg_value(s, ind):
@@ -142,11 +145,11 @@ if __name__ == "__main__":
                 print("gem5  (%8d): 0x%016x (%s): %s" % (gem5Line, gem5PC, gem5InstBits, gem5Inst))
                 print("spike (%8d): 0x%016x (%s): %s" %(spikeLine, spikePC, spikeInstBits, spikeInst))
     else:
-        prompt = "\r\n: "
+        prompt = ": "
         quit = "q"
-        reg = "reg 0"
         
-        spike = pexpect.spawn("/bin/bash -c \"spike -d pk " + args.spike_exe + " 1> /dev/null\"")
+#        spike = pexpect.spawn("/bin/bash -c \"spike -d pk " + args.spike_exe + " 1> /dev/null\"")
+        spike = pexpect.spawn("spike -d pk " + args.spike_exe)
         spike.setecho(False)
         try:
             gem5Line = 0
@@ -165,7 +168,7 @@ if __name__ == "__main__":
                         spike.expect(pcStr)
                         print("spike: Advanced to pc " + spike.after)
                     spike.expect(prompt)
-                    spike.sendline(reg)
+                    spike.sendline("reg 0")
                     spike.expect(regPattern)
 
                     gem5RegLine = args.gem5_trace.readline()
@@ -173,30 +176,73 @@ if __name__ == "__main__":
                     while re.match(r"(?:x\d{1,2} \(0x[0-9a-fA-F]{16}\) ){32}", gem5RegLine) == None:
                         gem5RegLine = args.gem5_trace.readline()
                         gem5Line += 1
-                    gem5Regs = gem5_find_regs(gem5RegLine)
+                    gem5IntRegs = gem5_find_int_regs(gem5RegLine)
+                    spikeIntRegs = spike.after
+                    while re.match(r"(?:f\d{1,2} \(-?\d+(?:\.\d+)?\) ){32}", gem5RegLine) == None:
+                        gem5RegLine = args.gem5_trace.readline()
+                        gem5Line += 1
+                    gem5FloatRegs = gem5_find_float_regs(gem5RegLine)
+                    spikeFloatRegs = {}
+                    for f in xrange(32):
+                        spike.expect(prompt)
+                        spike.sendline("fregd 0 " + str(f))
+                        spike.expect("-?\d+(?:\.\d+)?")
+                        spikeFloatRegs[f] = float(spike.after)
+
                     if args.verbose > 1:
-                        print("spike registers:")
+                        print("spike integer registers:")
                         print(spike.after)
-                        print("gem5 registers:")
-                        for i in xrange(len(gem5Regs)):
+                        print("gem5 integer registers:")
+                        for i in xrange(len(gem5IntRegs)):
                             if i % 4 == 0 and i != 0:
                                 sys.stdout.write("\n")
-                            sys.stdout.write("%- 4s: 0x%016x  " % (regList[i], gem5Regs[i]))
+                            sys.stdout.write("%- 4s: 0x%016x  " % (regList[i], gem5IntRegs[i]))
+                        sys.stdout.write("\n")
+                        print("spike float registers:")
+                        for f in xrange(32):
+                            if f % 4 == 0 and f != 0:
+                                sys.stdout.write("\n")
+                            sys.stdout.write("%- 4s: % 8.7f  " % ("f" + str(f), spikeFloatRegs[f]))
+                        sys.stdout.write("\n")
+                        print("gem5 float registers:")
+                        for f in xrange(len(gem5FloatRegs)):
+                            if f % 4 == 0 and f != 0:
+                                sys.stdout.write("\n")
+                            sys.stdout.write("%- 4s: % 8.7f  " %("f" + str(f), gem5FloatRegs[f]))
                         sys.stdout.write("\n\n")
-                    for r, val in gem5Regs.iteritems():
-                        spikeVal = spike_find_reg_value(spike.after, r)
+                    for r, val in gem5IntRegs.iteritems():
+                        spikeVal = spike_find_reg_value(spikeIntRegs, r)
                         if spikeVal != val:
                             print("gem5 (%d): Unexpected value in register %s: 0x%016x (expected 0x%016x)" % (gem5Line, regList[r], val, spikeVal))
                             if args.verbose == 1:
                                 print("")
-                                print("spike registers:")
+                                print("spike integer registers:")
                                 print(spike.after)
                                 print("")
-                                print("gem5 registers:")
-                                for i in xrange(len(gem5Regs)):
+                                print("gem5 integer registers:")
+                                for i in xrange(len(gem5IntRegs)):
                                     if i % 4 == 0 and i != 0:
                                         sys.stdout.write("\n")
-                                    sys.stdout.write("%- 4s: 0x%016x  " % (regList[i], gem5Regs[i]))
+                                    sys.stdout.write("%- 4s: 0x%016x  " % (regList[i], gem5IntRegs[i]))
+                                sys.stdout.write("\n")
+                            spike.expect(prompt)
+                            spike.sendline(quit)
+                            sys.exit(1)
+                    for f, val in gem5FloatRegs.iteritems():
+                        if spikeFloatRegs[f] != val:
+                            print("gem5 (%d): Unexpected value in register f%d: % 8.7f (expected % 8.7f)" % (gem5Line, f, val, spikeFloatRegs[f]))
+                            if args.verbose == 1:
+                                print("")
+                                print("spike integer registers:")
+                                for i in xrange(32):
+                                    if i % 4 == 0 and i != 0:
+                                        sys.stdout.write("\n")
+                                    sys.stdout.write("% -4s: % 8.7f  " % ("f" + str(i), spikeFloatRegs[f]))
+                                sys.stdout.write("\n")
+                                for i in xrange(len(gem5FloatRegs)):
+                                    if i % 4 != 0 and i != 0:
+                                        sys.stdout.write("\n")
+                                    sys.stdout.write("% -4s: % 8.7f  " % ("f" + str(i), gem5FloatRegs[i]))
                                 sys.stdout.write("\n")
                             spike.expect(prompt)
                             spike.sendline(quit)

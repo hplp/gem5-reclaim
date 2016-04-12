@@ -98,7 +98,7 @@ int main()
 {
     using namespace std;
 
-    // I (base)
+    // RV32I (base)
     expect<int>(4096, []{int a; asm("lui %0,0x1" : "=r" (a)); return a;}, "lui 0x1"); // LUI
     expect<int>(-2147483648, []{int a; asm("lui %0,0x80000" : "=r" (a)); return a;}, "lui 0x80000"); // LUI
     expect<int>(8, []{              // AUIPC and JALR
@@ -213,7 +213,7 @@ int main()
             : "r" (andi));
         return a;
     }, "andi (0)");
-    expect<int64_t>(0x1234567812345678ULL, []{         // ANDI
+    expect<int64_t>(0x1234567812345678ULL, []{ // ANDI
         int64_t andi = 0x1234567812345678ULL;
         int64_t a = 0;
         asm("andi %0,%1,-1"
@@ -478,9 +478,595 @@ int main()
         cout << "Instructions Retired: " << instret << endl;
         return instret > 0;
     }, "rdinstret");
+
+    // RV64I extension
     expect<int64_t>(0xFFFFFFFF, []{return load_test<uint32_t, uint64_t>(-1);}, "lwu"); // LWU
     expect<int64_t>(30064771072, []{return load_test<int64_t, int64_t>(30064771072);}, "ld"); // LD
     expect<uint64_t>(-1, []{return store_test<int64_t>(-1);}, "sd"); // SD
+    expect<int64_t>(268435710, []{ // ADDIW
+        int32_t addiw = 0x0FFFFFFF;
+        int64_t a = 0;
+        asm("addiw %0,%1,255"
+            : "=r" (a)
+            : "r" (addiw));
+        return a;
+    }, "addiw");
+    expect<int64_t>(-2147481602, []{// ADDIW
+        int32_t addiw = 0x7FFFFFFF;
+        int64_t a = 0;
+        asm("addiw %0,%1,0x7FF"
+            : "=r" (a)
+            : "r" (addiw));
+        return a;
+    }, "addiw, overflow");
+    expect<int64_t>(0, []{           // ADDIW
+        int64_t addiw = 0x7FFFFFFFFFFFFFFFLL;
+        int64_t a = -1;
+        asm("addiw %0,%1,1"
+            : "=r" (a)
+            : "r" (addiw));
+        return a;
+    }, "addiw, truncate");
+    expect<int64_t>(65280, []{      // SLLIW
+        int32_t slliw = 255;
+        int64_t a = 0;
+        asm("slliw %0,%1,8"
+            : "=r" (a)
+            : "r" (slliw));
+        return a;
+    }, "slliw, general");
+    expect<int64_t>(numeric_limits<int32_t>::min(), []{ // SLLIW
+        int32_t slliw = 255;
+        int64_t a = 0;
+        asm("slliw %0,%1,31"
+            : "=r" (a)
+            : "r" (slliw));
+        return a;
+    }, "slliw, erase");
+    expect<int64_t>(numeric_limits<int32_t>::min(), []{ // SLLIW
+        int64_t slliw = 0xFFFFFFF00800000LL;
+        int64_t a = 0;
+        asm("slliw %0,%1,8"
+            : "=r" (a)
+            : "r" (slliw));
+        return a;
+    }, "slliw, truncate");
+    expect<int64_t>(255, []{        // SRLIW
+        int32_t srliw = 65280;
+        int a = 0;
+        asm("srliw %0,%1,8"
+            : "=r" (a)
+            : "r" (srliw));
+        return a;
+    }, "srliw, general");
+    expect<int64_t>(0, []{          // SRLIW
+        int32_t srliw = 255;
+        int a = -1;
+        asm("srliw %0,%1,8"
+            : "=r" (a)
+            : "r" (srliw));
+        return a;
+    }, "srliw, erase");
+    expect<int64_t>(1, []{          // SRLIW
+        int32_t srliw = std::numeric_limits<int32_t>::min();
+        int a = 0;
+        asm("srliw %0,%1,31"
+            : "=r" (a)
+            : "r" (srliw));
+        return a;
+    }, "srliw, negative");
+    expect<int64_t>(1, []{          // SRLIW
+        int64_t srliw = 0xFFFFFFFF80000000LL;
+        int a = 0;
+        asm("srliw %0,%1,31"
+            : "=r" (a)
+            : "r" (srliw));
+        return a;
+    }, "srliw, truncate");
+    expect<int64_t>(255, []{        // SRAIW
+        int32_t sraiw = 65280;
+        int a = 0;
+        asm("sraiw %0,%1,8"
+            : "=r" (a)
+            : "r" (sraiw));
+        return a;
+    }, "sraiw, general");
+    expect<int32_t>(0, []{          // SRAIW
+        int64_t sraiw = 255;
+        int a = -1;
+        asm("sraiw %0,%1,8"
+            : "=r" (a)
+            : "r" (sraiw));
+        return a;
+    }, "sraiw, erase");
+    expect<int64_t>(-1, []{         // SRAIW
+        int32_t sraiw = std::numeric_limits<int32_t>::min();
+        int a = 0;
+        asm("sraiw %0,%1,31"
+            : "=r" (a)
+            : "r" (sraiw));
+        return a;
+    }, "sraiw, negative");
+    expect<int64_t>(-1, []{         // SRAIW
+        int64_t sraiw = 0x0000000180000000LL;
+        int a = 0;
+        asm("sraiw %0,%1,31"
+            : "=r" (a)
+            : "r" (sraiw));
+        return a;
+    }, "sraiw, truncate");
+    expect<int64_t>(1073742078, []{ // ADDW
+        int32_t rs1 = 0x3FFFFFFF;
+        int32_t rs2 = 255;
+        int64_t a = 0;
+        asm("addw %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "addw");
+    expect<int64_t>(-1, []{         // ADDW
+        uint32_t rs1 = 0x7FFFFFFF;
+        uint32_t rs2 = 0x80000000;
+        int64_t a = 0;
+        asm("addw %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "addw, overflow");
+    expect<uint64_t>(65536, []{     // ADDW
+        uint64_t rs1 = 0xFFFFFFFF0000FFFFLL;
+        uint64_t rs2 = 1;
+        uint64_t a = 0;
+        asm("addw %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "addw, truncate");
+    expect<uint64_t>(65535, []{     // SUBW
+        uint32_t rs1 = 65536;
+        uint32_t rs2 = 1;
+        int64_t a = 0;
+        asm("subw %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "subw");
+    expect<int64_t>(-1, []{         // SUBW
+        uint32_t rs1 = 0x7FFFFFFF;
+        uint32_t rs2 = 0x80000000;
+        int64_t a = 0;
+        asm("subw %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "subw, \"overflow\"");
+    expect<int64_t>(0, []{          // SUBW
+        uint64_t rs1 = 0xAAAAAAAAFFFFFFFFULL;
+        uint64_t rs2 = 0x55555555FFFFFFFFULL;
+        int64_t a = -1;
+        asm("subw %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "subw, truncate");
+    expect<int64_t>(65280, []{      // SLLW
+        int32_t rs1 = 255;
+        int32_t rs2 = 8;
+        int a = 0;
+        asm("sllw %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "sllw, general");
+    expect<int64_t>(numeric_limits<int32_t>::min(), []{ // SLLW
+        int32_t rs1 = 255;
+        int32_t rs2 = 31;
+        int64_t a = 0;
+        asm("sllw %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "sllw, erase");
+    expect<int64_t>(numeric_limits<int32_t>::min(), []{ // SLLW
+        int64_t rs1 = 0xFFFFFFFF00008000LL;
+        int64_t rs2 = 16;
+        int64_t a = 0;
+        asm("sllw %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "sllw, truncate");
+    expect<int64_t>(255, []{        // SRLW
+        int32_t rs1 = 65280;
+        int32_t rs2 = 8;
+        int a = 0;
+        asm("srlw %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "srlw, general");
+    expect<int64_t>(0, []{          // SRLW
+        int32_t rs1 = 255;
+        int32_t rs2 = 8;
+        int a = -1;
+        asm("srlw %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "srlw, erase");
+    expect<int64_t>(1, []{          // SRLW
+        int32_t rs1 = std::numeric_limits<int32_t>::min();
+        int32_t rs2 = 31;
+        int a = 0;
+        asm("srlw %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "srlw, negative");
+    expect<int64_t>(1, []{          // SRLW
+        int64_t rs1 = 0x0000000180000000LL;
+        int64_t rs2 = 31;
+        int a = 0;
+        asm("srlw %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "srlw, truncate");
+    expect<int64_t>(255, []{        // SRAW
+        int32_t rs1 = 65280;
+        int32_t rs2 = 8;
+        int a = 0;
+        asm("sraw %0,%1,8"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "sraw, general");
+    expect<int64_t>(0, []{          // SRAW
+        int32_t rs1 = 255;
+        int32_t rs2 = 8;
+        int a = -1;
+        asm("sraw %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "sraw, erase");
+    expect<int64_t>(-1, []{         // SRAW
+        int32_t rs1 = std::numeric_limits<int32_t>::min();
+        int32_t rs2 = 31;
+        int a = 0;
+        asm("sraw %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "sraw, negative");
+    expect<int64_t>(1, []{          // SRAW
+        int64_t rs1 = 0xFFFFFFFF40000000LL;
+        int64_t rs2 = 30;
+        int a = 0;
+        asm("sraw %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "sraw, truncate");
+
+    // RV32M extension
+    expect<int64_t>(39285, []{      // MUL
+        int64_t rs1 = 873;
+        int64_t rs2 = 45;
+        int64_t a = 0;
+        asm("mul %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "mul");
+    expect<int64_t>(0, []{          // MUL
+        int64_t rs1 = 0x4000000000000000LL;
+        int64_t rs2 = 4;
+        int64_t a = -1;
+        asm("mul %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "mul, overflow");
+    expect<int64_t>(1, []{          // MULH
+        int64_t rs1 = 0x4000000000000000LL;
+        int64_t rs2 = 4;
+        int a = 0;
+        asm("mulh %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "mulh");
+    expect<int64_t>(-1, []{         // MULH
+        int64_t rs1 = numeric_limits<int64_t>::min();
+        int64_t rs2 = 2;
+        int a = 0;
+        asm("mulh %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "mulh, negative");
+    expect<int64_t>(0, []{          // MULH
+        int64_t rs1 = -1;
+        int64_t rs2 = -1;
+        int a = -1;
+        asm("mulh %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "mulh, all bits set");
+    expect<int64_t>(-1, []{         // MULHSU
+        int64_t rs1 = -1;
+        uint64_t rs2 = -1;
+        int a = -1;
+        asm("mulhsu %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "mulhsu, all bits set");
+    expect<int64_t>(-1, []{         // MULHSU
+        int64_t rs1 = numeric_limits<int64_t>::min();
+        uint64_t rs2 = 2;
+        int64_t a = 0;
+        asm("mulhsu %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "mulhsu");
+    expect<uint64_t>(1, [] {        // MULHU
+        uint64_t rs1 = 0x8000000000000000ULL;
+        uint64_t rs2 = 2;
+        uint64_t a = 0;
+        asm("mulhu %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "mulhu");
+    expect<uint64_t>(0xFFFFFFFFFFFFFFFE, []{ // MULHU
+        uint64_t rs1 = -1;
+        uint64_t rs2 = -1;
+        uint64_t a = 0;
+        asm("mulhu %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "mulhu, all bits set");
+    expect<int64_t>(-7, []{         // DIV
+        int64_t rs1 = -59;
+        int64_t rs2 = 8;
+        int64_t a = 0;
+        asm("div %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "div");
+    expect<int64_t>(-1, []{         // DIV
+        int64_t rs1 = 255;
+        int64_t rs2 = 0;
+        int64_t a = 0;
+        asm("div %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "div/0");
+    expect<int64_t>(numeric_limits<int64_t>::min(), [] { // DIV
+        int64_t rs1 = numeric_limits<int64_t>::min();
+        int64_t rs2 = -1;
+        int64_t a = 0;
+        asm("div %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "div, overflow");
+    expect<uint64_t>(2305843009213693944LL, []{ // DIVU
+        uint64_t rs1 = -59;
+        uint64_t rs2 = 8;
+        uint64_t a = 0;
+        asm("divu %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "divu");
+    expect<uint64_t>(numeric_limits<uint64_t>::max(), []{ // DIVU
+        uint64_t rs1 = 255;
+        uint64_t rs2 = 0;
+        uint64_t a = 0;
+        asm("divu %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "divu/0");
+    expect<int64_t>(0, [] {         // DIVU
+        int64_t rs1 = numeric_limits<int64_t>::min();
+        int64_t rs2 = -1;
+        int64_t a = -1;
+        asm("divu %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "divu, \"overflow\"");
+    expect<int64_t>(-3, []{         // REM
+        int64_t rs1 = -59;
+        int64_t rs2 = 8;
+        int64_t a = 0;
+        asm("rem %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "rem");
+    expect<int64_t>(255, []{         // REM
+        int64_t rs1 = 255;
+        int64_t rs2 = 0;
+        int64_t a = 0;
+        asm("rem %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "rem/0");
+    expect<int64_t>(0, [] {         // REM
+        int64_t rs1 = numeric_limits<int64_t>::min();
+        int64_t rs2 = -1;
+        int64_t a = -1;
+        asm("rem %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "rem, overflow");
+    expect<uint64_t>(5, []{         // REMU
+        uint64_t rs1 = -59;
+        uint64_t rs2 = 8;
+        uint64_t a = 0;
+        asm("remu %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "remu");
+    expect<uint64_t>(255, []{       // REMU
+        uint64_t rs1 = 255;
+        uint64_t rs2 = 0;
+        uint64_t a = 0;
+        asm("remu %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "remu/0");
+    expect<int64_t>(numeric_limits<int64_t>::min(), [] { // REMU
+        int64_t rs1 = numeric_limits<int64_t>::min();
+        int64_t rs2 = -1;
+        int64_t a = 0;
+        asm("remu %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "remu, \"overflow\"");
+
+    // RV64M extension
+    expect<int64_t>(-100, []{       // MULW
+        int64_t rs1 = 0x7FFFFFFF00000005LL;
+        int64_t rs2 = 0x80000000FFFFFFECLL;
+        int64_t a = 0;
+        asm("mulw %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "mulw, truncate");
+    expect<int64_t>(0, []{          // MULW
+        int32_t rs1 = 0x40000000;
+        int32_t rs2 = 4;
+        int64_t a = -1;
+        asm("mulw %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "mulw, overflow");
+    expect<int64_t>(-7, []{         // DIVW
+        int64_t rs1 = 0x7FFFFFFFFFFFFFC5LL;
+        int64_t rs2 = 0xFFFFFFFF00000008LL;
+        int64_t a = 0;
+        asm("divw %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "divw, truncate");
+    expect<int64_t>(-1, []{         // DIVW
+        int32_t rs1 = 65535;
+        int32_t rs2 = 0;
+        int64_t a = 0;
+        asm("divw %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "divw/0");
+    expect<int64_t>(numeric_limits<int32_t>::min(), []{ // DIVW
+        int32_t rs1 = numeric_limits<int32_t>::min();
+        int32_t rs2 = -1;
+        int64_t a = 0;
+        asm("divw %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "divw, overflow");
+    expect<int64_t>(536870904, []{  // DIVUW
+        int64_t rs1 = 0x7FFFFFFFFFFFFFC5LL;
+        int64_t rs2 = 0xFFFFFFFF00000008LL;
+        int64_t a = 0;
+        asm("divuw %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "divuw, truncate");
+    expect<uint64_t>(numeric_limits<uint64_t>::max(), []{ // DIVUW
+        uint32_t rs1 = 65535;
+        uint32_t rs2 = 0;
+        uint64_t a = 0;
+        asm("divuw %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "divuw/0");
+    expect<uint64_t>(0, []{ // DIVUW
+        uint32_t rs1 = numeric_limits<int32_t>::min();
+        uint32_t rs2 = -1;
+        uint64_t a = 0;
+        asm("divuw %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "divuw, \"overflow\"");
+    expect<int64_t>(-3, []{         // REMW
+        int64_t rs1 = 0x7FFFFFFFFFFFFFC5LL;
+        int64_t rs2 = 0xFFFFFFFF00000008LL;
+        int64_t a = 0;
+        asm("remw %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "remw, truncate");
+    expect<int64_t>(65535, []{      // REMW
+        int32_t rs1 = 65535;
+        int32_t rs2 = 0;
+        int64_t a = 0;
+        asm("remw %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "remw/0");
+    expect<int64_t>(0, []{          // REMW
+        int32_t rs1 = numeric_limits<int32_t>::min();
+        int32_t rs2 = -1;
+        int64_t a = 0;
+        asm("remw %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "remw, overflow");
+    expect<int64_t>(5, []{          // REMUW
+        int64_t rs1 = 0x7FFFFFFFFFFFFFC5LL;
+        int64_t rs2 = 0xFFFFFFFF00000008LL;
+        int64_t a = 0;
+        asm("remuw %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "remuw, truncate");
+    expect<uint64_t>(65535, []{     // REMUW
+        uint32_t rs1 = 65535;
+        uint32_t rs2 = 0;
+        uint64_t a = 0;
+        asm("remuw %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "remuw/0");
+    expect<uint64_t>(numeric_limits<int32_t>::min(), []{ // REMUW
+        uint32_t rs1 = numeric_limits<int32_t>::min();
+        uint32_t rs2 = -1;
+        uint64_t a = 0;
+        asm("remuw %0,%1,%2"
+            : "=r" (a)
+            : "r" (rs1), "r" (rs2));
+        return a;
+    }, "remuw, \"overflow\"");
 
     return 0;
 }

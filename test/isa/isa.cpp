@@ -5,11 +5,13 @@
 #include <type_traits>
 #include <limits>
 #include <tuple>
+#include <cmath>
 #include "rv32_64i.hpp"
 #include "rv32_64m.hpp"
 #include "rv32_64a.hpp"
+#include "rv32_64f.hpp"
 
-template <class T1, class T2>
+template<typename T1, typename T2>
 std::ostream& operator<<(std::ostream& os, const std::pair<T1, T2>& p)
 {
     os << p.first << "," << p.second;
@@ -19,13 +21,15 @@ std::ostream& operator<<(std::ostream& os, const std::pair<T1, T2>& p)
 template<typename T>
 bool expect(const T& expected, std::function<T()> func, const std::string& test)
 {
+    using namespace std;
+
     T result = func();
-    std::cout << test << ": ";
+    cout << test << ": ";
     if (result == expected)
-        std::cout << "PASS";
+        cout << "PASS";
     else
-        std::cout << "\033[1;31mFAIL\033[0m (expected " << expected << "; found " << result << ")";
-    std::cout << std::endl;
+        cout << "\033[1;31mFAIL\033[0m (expected " << expected << "; found " << result << ")";
+    cout << endl;
     return result == expected;
 }
 
@@ -228,7 +232,48 @@ int main()
 
     // RV32A extension
     // TODO: Test that these are actually atomic (add aq and rl instruction extensions)
-    expect<pair<uint32_t, uint32_t>>(pair<uint32_t, uint32_t>(65535, 255), []{AMOSWAP_W(255, 65535, 0);}, "amoswap.w"); //AMOSWAP.W
+    // TODO: LR.W, SC.W
+    expect<pair<int64_t, int64_t>>({65535, 255}, []{AMOSWAP_W(uint32_t, 255, 65535, 0);}, "amoswap.w"); // AMOSWAP.W
+    expect<pair<int64_t, int64_t>>({0xFFFFFFFF, -1}, []{AMOSWAP_W(uint32_t, 0xFFFFFFFF, 0xFFFFFFFF, 0);}, "amoswap.w, sign extend"); // AMOSWAP.W
+    expect<pair<int64_t, int64_t>>({0x0000000180000000LL, -1}, []{AMOSWAP_W(int64_t, 0x00000001FFFFFFFFLL, 0x7FFFFFFF80000000LL, 0);}, "amoswap.w, truncate"); // AMOSWAP.W
+    expect<pair<int64_t, int64_t>>({256, 255}, []{AMOADD_W(int32_t, 255, 1, 0);}, "amoadd.w"); // AMOADD.W
+    expect<pair<int64_t, int64_t>>({0, -1}, []{AMOADD_W(int32_t, 0xFFFFFFFF, 1, 0);}, "amoadd.w, truncate/overflow"); // AMOADD.W
+    expect<pair<int64_t, int64_t>>({0xFFFFFFFF, 0x7FFFFFFF}, []{AMOADD_W(int64_t, 0x7FFFFFFF, 0x80000000, 0);}, "amoadd.w, sign extend"); // AMOADD.W
+    expect<pair<int64_t, int64_t>>({0xFFFFFFFFAAAAAAAALL, -1}, []{AMOXOR_W(int64_t, -1, 0x5555555555555555LL, 0);}, "amoxor.w, truncate"); // AMOXOR.W
+    expect<pair<int64_t, int64_t>>({0x80000000, -1}, []{AMOXOR_W(int32_t, 0xFFFFFFFF, 0x7FFFFFFF, 0);}, "amoxor.w, sign extend"); // AMOXOR.W
+    expect<pair<int64_t, int64_t>>({0xFFFFFFFF00000000LL, -1}, []{AMOAND_W(int64_t, -1, 0, 0);}, "amoand.w, truncate"); // AMOAND.W
+    expect<pair<int64_t, int64_t>>({0x0000000080000000LL, -1}, []{AMOAND_W(int32_t, 0xFFFFFFFF, numeric_limits<int32_t>::min(), 0);}, "amoand.w, sign extend"); // AMOAND.W
+    expect<pair<int64_t, int64_t>>({0x00000000FFFFFFFFLL, 0}, []{AMOOR_W(int64_t, 0, -1, -1);}, "amoor.w, truncate"); // AMOOR.W
+    expect<pair<int64_t, int64_t>>({0x0000000080000000LL, 0}, []{AMOOR_W(int32_t, 0, numeric_limits<int32_t>::min(), -1);}, "amoor.w, sign extend"); // AMOOR.W
+    expect<pair<int64_t, int64_t>>({0x7FFFFFFF00000001LL, 1}, []{AMOMIN_W(int64_t, 0x7FFFFFFF00000001LL, 0xFFFFFFFF000000FF, 0);}, "amomin.w, truncate"); // AMOMIN.W
+    expect<pair<int64_t, int64_t>>({0x00000000FFFFFFFELL, -1}, []{AMOMIN_W(int32_t, 0xFFFFFFFF, -2, 0);}, "amomin.w, sign extend"); // AMOMIN.W
+    expect<pair<int64_t, int64_t>>({0x70000000000000FFLL, 1}, []{AMOMAX_W(int64_t, 0x7000000000000001LL, 0x7FFFFFFF000000FFLL, 0);}, "amomax.w, truncate"); // AMOMAX.W
+    expect<pair<int64_t, int64_t>>({0x00000000FFFFFFFFLL, numeric_limits<int32_t>::min()}, []{AMOMAX_W(int32_t, 0x80000000, -1, -1);}, "amomax.w, sign extend"); // AMOMAX.W
+    expect<pair<int64_t, int64_t>>({0x0FFFFFFF000000FFLL, -1}, []{AMOMINU_W(int64_t, 0x0FFFFFFFFFFFFFFFLL, 0xFFFFFFFF000000FF, 0);}, "amominu.w, truncate"); // AMOMINU.W
+    expect<pair<int64_t, int64_t>>({0x0000000080000000LL, -1}, []{AMOMINU_W(int32_t, 0x00000000FFFFFFFFLL, 0x80000000, 0);}, "amominu.w, sign extend"); // AMOMINU.W
+    expect<pair<int64_t, int64_t>>({-1, 0}, []{AMOMAXU_W(int64_t, 0xFFFFFFFF00000000LL, 0x00000000FFFFFFFFLL, -1);}, "amomaxu.w, truncate"); // AMOMAXU.W
+    expect<pair<int64_t, int64_t>>({0xFFFFFFFF, numeric_limits<int32_t>::min()}, []{AMOMAXU_W(int32_t, 0x80000000, 0xFFFFFFFF, -1);}, "amomaxu.w, sign extend"); // AMOMAXU.W
+
+    // RV64A extension
+    // TODO: LR.D, SC.D
+    expect<pair<int64_t, int64_t>>({1, -1}, []{AMOSWAP_D(-1, 1, 0);}, "amoswap.d"); // AMOSWAP.D
+    expect<pair<int64_t, int64_t>>({0x7000000000000000LL, 0x0FFFFFFFFFFFFFFFLL}, []{AMOADD_D(0x0FFFFFFFFFFFFFFFLL, 0x6000000000000001LL, 0);}, "amoadd.d"); // AMOADD.D
+    expect<pair<int64_t, int64_t>>({0, 0x7FFFFFFFFFFFFFFFLL}, []{AMOADD_D(0x7FFFFFFFFFFFFFFFLL, 0x8000000000000001LL, 0);}, "amoadd.d, overflow"); // AMOADD.D
+    expect<pair<int64_t, int64_t>>({-1, 0xAAAAAAAAAAAAAAAALL}, []{AMOXOR_D(0xAAAAAAAAAAAAAAAALL, 0x5555555555555555LL, 0);}, "amoxor.d (1)"); // AMOXOR.D
+    expect<pair<int64_t, int64_t>>({0, 0xAAAAAAAAAAAAAAAALL}, []{AMOXOR_D(0xAAAAAAAAAAAAAAAALL, 0xAAAAAAAAAAAAAAAALL, 0);}, "amoxor.d (0)"); // AMOXOR.D
+    expect<pair<int64_t, int64_t>>({0xAAAAAAAAAAAAAAAALL, -1}, []{AMOAND_D(-1, 0xAAAAAAAAAAAAAAAALL, 0);}, "amoand.d"); // AMOAND.D
+    expect<pair<int64_t, int64_t>>({-1, 0xAAAAAAAAAAAAAAAALL}, []{AMOOR_D(0xAAAAAAAAAAAAAAAALL, 0x5555555555555555LL, 0);}, "amoor.d"); // AMOOR.D
+    expect<pair<int64_t, int64_t>>({-1, -1}, []{AMOMIN_D(-1, 0, 0);}, "amomin.d"); // AMOMIN.D
+    expect<pair<int64_t, int64_t>>({0, -1}, []{AMOMAX_D(-1, 0, 0);}, "amomax.d"); // AMOMAX.D
+    expect<pair<uint64_t, uint64_t>>({0, -1}, []{AMOMINU_D(-1, 0, 0);}, "amominu.d"); // AMOMINU.D
+    expect<pair<uint64_t, uint64_t>>({-1, -1}, []{AMOMAXU_D(-1, 0, 0);}, "amomaxu.d"); // AMOMAXU.D
+
+    // RV32F extension
+    expect<float>(3.14, []{return rv32_64f::load(3.14);}, "flw"); // FLW
+    expect<float>(1.816, []{return rv32_64f::store(1.816);}, "fsw"); // FSW
+    expect<float>(7.11624, []{return rv32_64f::fmadd_s(3.14, 1.816, 1.414);}, "fmadd.s"); // FMADD.S
+    expect<bool>(true, []{return rv32_64f::isquietnan(rv32_64f::fmadd_s(numeric_limits<float>::quiet_NaN(), 3.14, 1.816));}, "fmadd.s, quiet NaN"); // FMADD.S
+    expect<bool>(true, []{return rv32_64f::isquietnan(rv32_64f::fmadd_s(numeric_limits<float>::signaling_NaN(), 3.14, 1.816));}, "fmadd.s, signaling NaN"); // FMADD.S
 
     return 0;
 }

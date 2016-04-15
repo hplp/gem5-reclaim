@@ -2,6 +2,8 @@
 
 #include <type_traits>
 
+#define ROP(inst, rd, rs1, rs2) asm(inst " %0,%1,%2" : "=r" (rd) : "r" (rs1), "r" (rs2))
+
 namespace rv32_64i
 {
     template<typename M, typename R>

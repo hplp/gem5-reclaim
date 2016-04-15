@@ -380,6 +380,7 @@ int main()
     expect<int64_t>(-256, []{return rv32_64f::fcvt_w_s(-256.2);}, "fcvt.w.s, truncate negative"); // FCVT.W.S
     expect<int64_t>(0, []{return rv32_64f::fcvt_w_s(0.0);}, "fcvt.w.s, 0.0"); // FCVT.W.S
     expect<int64_t>(0, []{return rv32_64f::fcvt_w_s(-0.0);}, "fcvt.w.s, -0.0"); // FCVT.W.S
+    expect<int64_t>(numeric_limits<int32_t>::max(), []{return rv32_64f::fcvt_w_s(numeric_limits<float>::max());}, "fcvt.w.s, overflow"); // FCVT.W.S
     expect<int64_t>(numeric_limits<int32_t>::max(), []{return rv32_64f::fcvt_w_s(numeric_limits<float>::infinity());}, "fcvt.w.s, infinity"); // FCVT.W.S
     expect<int64_t>(numeric_limits<int32_t>::min(), []{return rv32_64f::fcvt_w_s(-numeric_limits<float>::infinity());}, "fcvt.w.s, -infinity"); // FCVT.W.S
     expect<int64_t>(numeric_limits<int32_t>::max(), []{return rv32_64f::fcvt_w_s(numeric_limits<float>::quiet_NaN());}, "fcvt.w.s, quiet NaN"); // FCVT.W.S
@@ -389,6 +390,7 @@ int main()
     expect<uint64_t>(0, []{return rv32_64f::fcvt_wu_s(-256.2);}, "fcvt.wu.s, truncate negative"); // FCVT.WU.S
     expect<uint64_t>(0, []{return rv32_64f::fcvt_wu_s(0.0);}, "fcvt.wu.s, 0.0"); // FCVT.WU.S
     expect<uint64_t>(0, []{return rv32_64f::fcvt_wu_s(-0.0);}, "fcvt.wu.s, -0.0"); // FCVT.WU.S
+    expect<uint64_t>(numeric_limits<uint64_t>::max(), []{return rv32_64f::fcvt_wu_s(numeric_limits<float>::max());}, "fcvt.wu.s, overflow"); // FCVT.WU.S
     expect<uint64_t>(0xFFFFFFFFFFFFFFFFULL, []{return rv32_64f::fcvt_wu_s(numeric_limits<float>::infinity());}, "fcvt.wu.s, infinity"); // FCVT.WU.S
     expect<uint64_t>(0, []{return rv32_64f::fcvt_wu_s(-numeric_limits<float>::infinity());}, "fcvt.wu.s, -infinity"); // FCVT.WU.S
     expect<uint64_t>(0xFFFFFFFFFFFFFFFFULL, []{return rv32_64f::fcvt_wu_s(numeric_limits<float>::quiet_NaN());}, "fcvt.wu.s, quiet NaN"); // FCVT.WU.S
@@ -433,6 +435,7 @@ int main()
     expect<float>(255.0, []{return rv32_64f::fcvt_s_wu(0xFFFFFFFF000000FFLL);}, "fcvt.s.wu, truncate"); // FCVT.S.WU
     expect<float>(numeric_limits<float>::infinity(), []{return rv32_64f::fmv_s_x(0x7F800000);}, "fmv.s.x"); // FMV.S.X
     expect<float>(-0.0, []{return rv32_64f::fmv_s_x(0xFFFFFFFF80000000ULL);}, "fmv.s.x, truncate"); // FMV.S.X
+    uint8_t rm = rv32_64f::frrm();
     expect<uint64_t>(0x8, []{ // FRCSR, DZ
         asm("fscsr zero,zero");
         rv32_64f::fdiv_s(1.0, 0.0);
@@ -474,6 +477,37 @@ int main()
         return pair<uint64_t, uint64_t>(rv32_64f::fsrm(0xF), rv32_64f::frrm());
     }, "fsrm, frrm");
     asm("fscsr zero,zero");
+    rv32_64f::fsrm(rm);
+
+    // RV64F extension
+    expect<int64_t>(256, []{return rv32_64f::fcvt_l_s(256.3);}, "fcvt.l.s, truncate positive"); // FCVT.L.S
+    expect<int64_t>(-256, []{return rv32_64f::fcvt_l_s(-256.2);}, "fcvt.l.s, truncate negative"); // FCVT.L.S
+    expect<int64_t>(0, []{return rv32_64f::fcvt_l_s(0.0);}, "fcvt.l.s, 0.0"); // FCVT.L.S
+    expect<int64_t>(0, []{return rv32_64f::fcvt_l_s(-0.0);}, "fcvt.l.s, -0.0"); // FCVT.L.S
+    expect<int64_t>(-8589934592LL, []{return rv32_64f::fcvt_l_s(-8589934592.0);}, "fcvt.l.s, 32-bit overflow"); // FCVT.L.S
+    expect<int64_t>(numeric_limits<int64_t>::max(), []{return rv32_64f::fcvt_l_s(numeric_limits<float>::max());}, "fcvt.l.s, overflow"); // FCVT.L.S
+    expect<int64_t>(numeric_limits<int64_t>::max(), []{return rv32_64f::fcvt_l_s(numeric_limits<float>::infinity());}, "fcvt.l.s, infinity"); // FCVT.L.S
+    expect<int64_t>(numeric_limits<int64_t>::min(), []{return rv32_64f::fcvt_l_s(-numeric_limits<float>::infinity());}, "fcvt.l.s, -infinity"); // FCVT.L.S
+    expect<int64_t>(numeric_limits<int64_t>::max(), []{return rv32_64f::fcvt_l_s(numeric_limits<float>::quiet_NaN());}, "fcvt.l.s, quiet NaN"); // FCVT.L.S
+    expect<int64_t>(numeric_limits<int64_t>::max(), []{return rv32_64f::fcvt_l_s(-numeric_limits<float>::quiet_NaN());}, "fcvt.l.s, quiet -NaN"); // FCVT.L.S
+    expect<int64_t>(numeric_limits<int64_t>::max(), []{return rv32_64f::fcvt_l_s(numeric_limits<float>::signaling_NaN());}, "fcvt.l.s, signaling NaN"); // FCVT.L.S
+    expect<uint64_t>(256, []{return rv32_64f::fcvt_lu_s(256.3);}, "fcvt.lu.s, truncate positive"); // FCVT.LU.S
+    expect<uint64_t>(0, []{return rv32_64f::fcvt_lu_s(-256.2);}, "fcvt.lu.s, truncate negative"); // FCVT.LU.S
+    expect<uint64_t>(0, []{return rv32_64f::fcvt_lu_s(0.0);}, "fcvt.lu.s, 0.0"); // FCVT.LU.S
+    expect<uint64_t>(0, []{return rv32_64f::fcvt_lu_s(-0.0);}, "fcvt.lu.s, -0.0"); // FCVT.LU.S
+    expect<uint64_t>(8589934592LL, []{return rv32_64f::fcvt_lu_s(8589934592.0);}, "fcvt.lu.s, 32-bit overflow"); // FCVT.LU.S
+    expect<uint64_t>(numeric_limits<uint64_t>::max(), []{return rv32_64f::fcvt_lu_s(numeric_limits<float>::max());}, "fcvt.lu.s, overflow"); // FCVT.LU.S
+    expect<uint64_t>(0xFFFFFFFFFFFFFFFFULL, []{return rv32_64f::fcvt_lu_s(numeric_limits<float>::infinity());}, "fcvt.lu.s, infinity"); // FCVT.LU.S
+    expect<uint64_t>(0, []{return rv32_64f::fcvt_lu_s(-numeric_limits<float>::infinity());}, "fcvt.lu.s, -infinity"); // FCVT.LU.S
+    expect<uint64_t>(0xFFFFFFFFFFFFFFFFULL, []{return rv32_64f::fcvt_lu_s(numeric_limits<float>::quiet_NaN());}, "fcvt.lu.s, quiet NaN"); // FCVT.LU.S
+    expect<uint64_t>(0xFFFFFFFFFFFFFFFFULL, []{return rv32_64f::fcvt_lu_s(-numeric_limits<float>::quiet_NaN());}, "fcvt.lu.s, quiet -NaN"); // FCVT.LU.S
+    expect<uint64_t>(0xFFFFFFFFFFFFFFFFULL, []{return rv32_64f::fcvt_lu_s(numeric_limits<float>::signaling_NaN());}, "fcvt.lu.s, signaling NaN"); // FCVT.LU.S
+    expect<float>(0.0, []{return rv32_64f::fcvt_s_l(0);}, "fcvt.s.l, 0"); // FCVT.S.L
+    expect<float>(-9.223372e18, []{return rv32_64f::fcvt_s_l(numeric_limits<int64_t>::min());}, "fcvt.s.l, negative"); // FCVT.S.L
+    expect<float>(-4.29496704e9, []{return rv32_64f::fcvt_s_l(0xFFFFFFFF000000FFLL);}, "fcvt.s.l, 32-bit truncate"); // FCVT.S.L
+    expect<float>(0.0, []{return rv32_64f::fcvt_s_lu(0);}, "fcvt.s.lu, 0"); // FCVT.S.LU
+    expect<float>(9.223372e18, []{return rv32_64f::fcvt_s_lu(numeric_limits<int64_t>::min());}, "fcvt.s.lu"); // FCVT.S.LU
+    expect<float>(1.8446744e19, []{return rv32_64f::fcvt_s_lu(0xFFFFFFFF000000FFLL);}, "fcvt.s.lu, 32-bit truncate"); // FCVT.S.LU
 
     cout << passes << " tests passed; " << failures << " failed." << endl;
 

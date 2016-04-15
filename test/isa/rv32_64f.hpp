@@ -11,12 +11,12 @@
 
 namespace rv32_64f
 {
-    inline uint32_t bits(float f)
+    constexpr inline uint32_t bits(const float f)
     {
         return *((uint32_t*)&f);
     }
 
-    inline float number(uint32_t b)
+    constexpr inline float number(const uint32_t b)
     {
         return *((float*)&b);
     }
@@ -257,6 +257,34 @@ namespace rv32_64f
         uint64_t rd = -1;
         asm("fsflags %0,%1" : "=r" (rd) : "r" (rs1));
         return rd;
+    }
+
+    int64_t fcvt_l_s(float fs1)
+    {
+        int64_t rd = 0;
+        asm("fcvt.l.s %0,%1" : "=r" (rd) : "f" (fs1));
+        return rd;
+    }
+
+    uint64_t fcvt_lu_s(float fs1)
+    {
+        int64_t rd = 0;
+        asm("fcvt.lu.s %0,%1" : "=r" (rd) : "f" (fs1));
+        return rd;
+    }
+
+    float fcvt_s_l(int64_t rs1)
+    {
+        float fd = 0;
+        asm("fcvt.s.l %0,%1" : "=f" (fd) : "r" (rs1));
+        return fd;
+    }
+
+    float fcvt_s_lu(uint64_t rs1)
+    {
+        float fd = 0;
+        asm("fcvt.s.lu %0,%1" : "=f" (fd) : "r" (rs1));
+        return fd;
     }
 }
 

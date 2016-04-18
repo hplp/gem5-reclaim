@@ -1,10 +1,7 @@
 #pragma once
 
 #include <limits>
-#include <tuple>
 #include <cmath>
-
-#include <cstdio>
 
 #define FR4OP(inst, fd, fs1, fs2, fs3) asm(inst " %0,%1,%2,%3" : "=f" (fd) : "f" (fs1), "f" (fs2), "f" (fs3))
 #define FROP(inst, fd, fs1, fs2) asm(inst " %0,%1,%2" : "=f" (fd) : "f" (fs1), "f" (fs2))
@@ -34,18 +31,18 @@ namespace rv32_64f
     float load(float mem)
     {
         float fd = std::numeric_limits<float>::signaling_NaN();
-        asm("flw %0,0(%1)"
+        asm("flw %0,%1"
             : "=f" (fd)
-            : "r" (&mem));
+            : "m" (mem));
         return fd;
     }
 
     float store(float fs)
     {
         float mem = std::numeric_limits<float>::signaling_NaN();
-        asm("fsw %0,0(%1)"
+        asm("fsw %0,%1"
             :
-            : "f" (fs), "r" (&mem));
+            : "f" (fs), "m" (mem));
         return mem;
     }
 

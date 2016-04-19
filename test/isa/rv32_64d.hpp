@@ -108,4 +108,53 @@ namespace rv32_64d
         asm("fsqrt.d %0,%1" : "=f" (fd) : "f" (fs1));
         return fd;
     }
+
+    double fsgnj_d(double fs1, double fs2)
+    {
+        double fd = std::numeric_limits<double>::signaling_NaN();
+        FROP("fsgnj.d", fd, fs1, fs2);
+        return fd;
+    }
+
+    double fsgnjn_d(double fs1, double fs2)
+    {
+        double fd = std::numeric_limits<double>::signaling_NaN();
+        FROP("fsgnjn.d", fd, fs1, fs2);
+        return fd;
+    }
+
+    double fsgnjx_d(double fs1, double fs2)
+    {
+        double fd = std::numeric_limits<double>::signaling_NaN();
+        FROP("fsgnjx.d", fd, fs1, fs2);
+        return fd;
+    }
+
+    double fmin_d(double fs1, double fs2)
+    {
+        double fd = std::numeric_limits<double>::signaling_NaN();
+        FROP("fmin.d", fd, fs1, fs2);
+        return fd;
+    }
+
+    double fmax_d(double fs1, double fs2)
+    {
+        double fd = std::numeric_limits<double>::signaling_NaN();
+        FROP("fmax.d", fd, fs1, fs2);
+        return fd;
+    }
+
+    float fcvt_s_d(double fs1)
+    {
+        float fd = std::numeric_limits<float>::signaling_NaN();
+        asm("fcvt.s.d %0,%1" : "=f" (fd) : "f" (fs1));
+        return fd;
+    }
+    
+    double fcvt_d_s(float fs1)
+    {
+        double fd = std::numeric_limits<double>::signaling_NaN();
+        asm("fcvt.d.s %0,%1" : "=f" (fd) : "f" (fs1));
+        return fd;
+    }
 }

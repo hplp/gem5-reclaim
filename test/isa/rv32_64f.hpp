@@ -292,16 +292,16 @@ namespace rv32_64f
         return {rd, frflags()};
     }
 
-    float fcvt_s_l(int64_t rs1)
+    inline float fcvt_s_l(int64_t rs1)
     {
-        float fd = 0;
+        float fd = std::numeric_limits<float>::signaling_NaN();
         asm("fcvt.s.l %0,%1" : "=f" (fd) : "r" (rs1));
         return fd;
     }
 
-    float fcvt_s_lu(uint64_t rs1)
+    inline float fcvt_s_lu(uint64_t rs1)
     {
-        float fd = 0;
+        float fd = std::numeric_limits<float>::signaling_NaN();
         asm("fcvt.s.lu %0,%1" : "=f" (fd) : "r" (rs1));
         return fd;
     }

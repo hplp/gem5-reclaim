@@ -3,13 +3,14 @@ import os
 import simmanager as sim
 import subprocess as sproc
 import time
+import atexit
 
 if __name__ == '__main__':
     print('Creating simulation manager...')
     sman = sim.SimManager()
     self_pid = os.getpid()
 
-    time.sleep(2)
+    atexit.register(sman.StopAllTools, blocking=True)
 
     #print('Starting ReCLAIM...')
     # reclaim = sman.StartTool(   # Run simulation of reclaim microcontroller (tee substitutes for now)
@@ -22,35 +23,49 @@ if __name__ == '__main__':
     # time.sleep(2)
 
     print('Starting VoltSpot...')
+    gridvol_gz = sman.StartTool(   # Write gridvol to file
+        'gridvol_gz',
+        'gzip -acfq --best',
+        stdin=sproc.PIPE,
+        stdout=open('voltspot.gridvol.gz', 'w'),
+        stderr=sproc.DEVNULL)
     gridvol = sman.StartTool(   # Write gridvol to file
         'gridvol',
-        'tee voltspot.gridvol',
+        'tee /dev/stderr',
         stdin=sproc.PIPE,
         stdout=sproc.PIPE,
-        stderr=sproc.DEVNULL)
+        stderr=gridvol_gz.stdin)
+    voltspot_args = 'voltspot ' + \
+        '-f ../config/penryn.flp ' + \
+        '-p /dev/stdin ' + \
+        '-c ../config/voltspot.config ' + \
+        '-v /dev/stdout ' + \
+        '-gridvol_file /dev/stderr ' + \
+        '-PDN_ptrace_start 1 ' + \
+        '-PDN_ptrace_stop 999999999'
+    print(voltspot_args)
     voltspot = sman.StartTool(  # Run voltspot
         'voltspot',
-        'voltspot \
-        -f ../config/penryn.flp \
-        -p /dev/stdin \
-        -c ../config/voltspot.config \
-        -v /dev/stdout \
-        -gridvol_file /dev/stderr \
-        -PDN_ptrace_start 1 \
-        -PDN_ptrace_stop 999999999',
+        voltspot_args,
         stdin=sproc.PIPE,
         stdout=open('voltspot.log', 'w'),
         stderr=gridvol.stdin)
 
-    time.sleep(2)
+    time.sleep(1)
 
-    print('Starting hotspot')
+    print('Starting hotspot...')
+    gridtemp_gz = sman.StartTool(   # Write gridvol to file
+        'gridtemp_gz',
+        'gzip -acfq --best',
+        stdin=sproc.PIPE,
+        stdout=open('hotspot.gridtemp.gz', 'w'),
+        stderr=sproc.DEVNULL)
     gridtemp = sman.StartTool(   # Write gridvol to file
         'gridtemp',
-        'tee hotspot.gridtemp',
+        'tee /dev/stderr',
         stdin=sproc.PIPE,
         stdout=sproc.PIPE,
-        stderr=sproc.DEVNULL)
+        stderr=gridtemp_gz.stdin)
     hotspot_args = 'hotspot ' + \
         '-f ../config/penryn.flp ' + \
         '-p /dev/stdin ' + \
@@ -65,7 +80,7 @@ if __name__ == '__main__':
         stdout=open('hotspot.log', 'w'),
         stderr=gridtemp.stdin)
 
-    time.sleep(2)
+    time.sleep(1)
 
     print('Starting heatvideo...')
     gridvol_fd = gridvol.stdout.fileno()
@@ -83,7 +98,7 @@ if __name__ == '__main__':
         stdout=open('heatvideo.log', 'w'),
         stderr=open('heatvideo.err', 'w'))
 
-    time.sleep(2)
+    time.sleep(1)
 
     print('Starting McPAT -> hotspot.ptrace')
     ptrace_split = sman.StartTool(  # Send ptrace to hotspot and voltspot
@@ -101,12 +116,12 @@ if __name__ == '__main__':
     feed = sman.StartTool(  # Convert McPAT output to HotSpot format
         'feed', 'cat ./mcpat.ptrace', stdout=ptrace.stdin)
 
-    time.sleep(2)
+    time.sleep(1)
 
     print('Starting McPAT...')
     #mcpat = sman.StartTool('mcpat', '')
 
-    time.sleep(2)
+    time.sleep(1)
 
     print('Waiting for output...')
-    voltspot.communicate()[0]
+    heatvideo.communicate()[0]

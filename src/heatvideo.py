@@ -32,30 +32,8 @@ def getFloorPlan(floorplan, scale):
     return layout
 
 
-def ReadHotspotFrame(hfd, hsize=None, tsize=(100, 100)):
-    xcount = 0
-    ycount = 0
-    newline = False
-    if hsize:
-        hframe = np.zeros(hsize, dtype=np.float32)
-    else:
-        hframe = np.zeros((2, 2), dtype=np.float32)
-    for line in hfd:
-        if line == '\n':
-            if newline is True:
-                break
-            xcount = 0
-            ycount += 1
-            newline = True
-        else:
-            value = line.split()
-            if xcount >= hframe.shape[1]:
-                hframe = np.c_[hframe, np.zeros(hframe.shape[0])]
-            if ycount >= hframe.shape[0]:
-                hframe = np.r_[hframe, np.zeros((1, hframe.shape[1]))]
-            hframe[ycount, xcount] = np.float32(value[1])
-            xcount += 1
-            newline = False
+def ReadHotspotFrame(hfd, tsize=(100, 100)):
+    hframe = np.array([x.split() for x in hfd.readline().split('|')], dtype=np.float64)
     hframe = hframe[::-1, :]
     # Resize hotspot frame to tsize
     if hframe.shape != tsize:
@@ -64,9 +42,8 @@ def ReadHotspotFrame(hfd, hsize=None, tsize=(100, 100)):
     return hframe
 
 
-def ReadVoltspotFrame(vfd, vsize=(2, 2), tsize=(100, 100)):
-    vframe = np.array(vfd.readline().split(), dtype=np.float32)
-    vframe = vframe.reshape(vsize[1], vsize[0])
+def ReadVoltspotFrame(vfd, tsize=(100, 100)):
+    vframe = np.array([x.split() for x in vfd.readline().split('|')], dtype=np.float64)
     vframe = vframe[::-1, :]
     # Resize voltspot frame to be tsize
     if vframe.shape != tsize:
@@ -119,7 +96,7 @@ except IOError:
     print('Could not open voltspot file: ' + args.voltspot_file)
 
 hframe = ReadHotspotFrame(hfd)
-vframe = ReadVoltspotFrame(vfd, vsize=(xdim, ydim))
+vframe = ReadVoltspotFrame(vfd)
 print('vframe.shape = ' + str(vframe.shape))
 
 # Generate plot for animation
@@ -151,14 +128,14 @@ plt.show()
 
 def make_vframe(n):  # Define function for generating frames
     vframe_index.set_text('Line #' + str(n + 1))
-    vfr = ReadVoltspotFrame(vfd, vsize=(xdim, ydim))
+    vfr = ReadVoltspotFrame(vfd)
     imv.set_data(vfr)
     return imv
 
 
 def make_hframe(n):  # Define function for generating frames
     hframe_index.set_text('Line #' + str(n + 1))
-    hfr = ReadHotspotFrame(hfd, hframe.shape)
+    hfr = ReadHotspotFrame(hfd)
     imh.set_data(hfr)
     return imh
 

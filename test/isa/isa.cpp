@@ -125,28 +125,28 @@ int main()
     expect<int64_t>(255, []{SHIFTI("srai", 65280, 0, 8);}, "srai, general"); // SRAI
     expect<int64_t>(0, []{SHIFTI("srai", 255, -1, 8);}, "srai, erase"); // SRAI
     expect<int64_t>(-1, []{SHIFTI("srai", std::numeric_limits<int64_t>::min(), 0, 63);}, "srai, negative"); // SRAI
-    expect<int64_t>(1073742078, []{ADD(int64_t, 0x3FFFFFFF, 255, 0);}, "add"); // ADD
-    expect<int64_t>(-1, []{ADD(uint64_t, 0x7FFFFFFFFFFFFFFFULL, 0x8000000000000000ULL, 0);}, "add, overflow"); // ADD
-    expect<int64_t>(65535, []{SUB(uint64_t, 65536, 1, 0);}, "sub"); // SUB
-    expect<int64_t>(-1, []{SUB(uint64_t, 0x7FFFFFFFFFFFFFFFULL, 0x8000000000000000ULL, 0);}, "sub, \"overflow\""); // SUB
-    expect<int64_t>(65280, []{SHIFT("sll", 255, 8, 0);}, "sll, general"); // SLL
-    expect<int64_t>(numeric_limits<int64_t>::min(), []{SHIFT("sll", 255, 63, 0);}, "sll, erase"); // SLL
-    expect<bool>(true, []{SLT(-1, 0, false);}, "slt, true"); // SLT
-    expect<bool>(false, []{SLT(0, -1, true);}, "slt, false"); // SLT
-    expect<bool>(false, []{SLTU(-1, 0, true);}, "sltu, false"); // SLTU
-    expect<bool>(true, []{SLTU(0, -1, false);}, "sltu, true"); // SLTU
-    expect<uint64_t>(-1, []{BIT("xor", 0xAAAAAAAAAAAAAAAAULL, 0x5555555555555555ULL, 0);}, "xor (1)"); // XOR
-    expect<uint64_t>(0, []{BIT("xor", 0xAAAAAAAAAAAAAAAAULL, 0xAAAAAAAAAAAAAAAAULL, -1);}, "xor(0)"); // XOR
-    expect<int64_t>(255, []{SHIFT("srl", 65280, 8, 0);}, "srl, general"); // SRL
-    expect<int64_t>(0, []{SHIFT("srl", 255, 8, -1);}, "srl, erase"); // SRL
-    expect<int64_t>(1, []{SHIFT("srl", numeric_limits<int64_t>::min(), 63, 0);}, "srl, negative"); // SRL
-    expect<int64_t>(255, []{SHIFT("sra", 65280, 8, 0);}, "sra, general"); // SRA
-    expect<int64_t>(0, []{SHIFT("sra", 255, 8, -1);}, "sra, erase"); // SRA
-    expect<int64_t>(-1, []{SHIFT("sra", numeric_limits<int64_t>::min(), 63, 0);}, "sra, negative"); // SRA
-    expect<uint64_t>(-1, []{BIT("or", 0xAAAAAAAAAAAAAAAAULL, 0x5555555555555555ULL, 0);}, "or (1)"); // OR
-    expect<uint64_t>(0xAAAAAAAAAAAAAAAAULL, []{BIT("or", 0xAAAAAAAAAAAAAAAAULL, 0xAAAAAAAAAAAAAAAAULL, -1);}, "or (A)"); // OR
-    expect<uint64_t>(0, []{BIT("and", -1, 0, -1);}, "and (0)"); // AND
-    expect<uint64_t>(0x1234567812345678ULL, []{BIT("and", 0x1234567812345678ULL, -1, 0);}, "and (-1)"); // AND
+    expect<int64_t>(1073742078, []{return rv32_64i::add(0x3FFFFFFF, 255);}, "add"); // ADD
+    expect<int64_t>(-1, []{return rv32_64i::add(0x7FFFFFFFFFFFFFFFLL, 0x8000000000000000LL);}, "add, overflow"); // ADD
+    expect<int64_t>(65535, []{return rv32_64i::sub(65536, 1);}, "sub"); // SUB
+    expect<int64_t>(-1, []{return rv32_64i::sub(0x7FFFFFFFFFFFFFFFLL, 0x8000000000000000LL);}, "sub, \"overflow\""); // SUB
+    expect<int64_t>(65280, []{return rv32_64i::sll(255, 8);}, "sll, general"); // SLL
+    expect<int64_t>(numeric_limits<int64_t>::min(), []{return rv32_64i::sll(255, 63);}, "sll, erase"); // SLL
+    expect<bool>(true, []{return rv32_64i::slt(-1, 0);}, "slt, true"); // SLT
+    expect<bool>(false, []{return rv32_64i::slt(0, -1);}, "slt, false"); // SLT
+    expect<bool>(false, []{return rv32_64i::sltu(-1, 0);}, "sltu, false"); // SLTU
+    expect<bool>(true, []{return rv32_64i::sltu(0, -1);}, "sltu, true"); // SLTU
+    expect<uint64_t>(-1, []{return rv32_64i::xor_inst(0xAAAAAAAAAAAAAAAAULL, 0x5555555555555555ULL);}, "xor (1)"); // XOR
+    expect<uint64_t>(0, []{return rv32_64i::xor_inst(0xAAAAAAAAAAAAAAAAULL, 0xAAAAAAAAAAAAAAAAULL);}, "xor(0)"); // XOR
+    expect<uint64_t>(255, []{return rv32_64i::srl(65280, 8);}, "srl, general"); // SRL
+    expect<uint64_t>(0, []{return rv32_64i::srl(255, 8);}, "srl, erase"); // SRL
+    expect<uint64_t>(1, []{return rv32_64i::srl(numeric_limits<int64_t>::min(), 63);}, "srl, negative"); // SRL
+    expect<int64_t>(255, []{return rv32_64i::sra(65280, 8);}, "sra, general"); // SRA
+    expect<int64_t>(0, []{return rv32_64i::sra(255, 8);}, "sra, erase"); // SRA
+    expect<int64_t>(-1, []{return rv32_64i::sra(numeric_limits<int64_t>::min(), 63);}, "sra, negative"); // SRA
+    expect<uint64_t>(-1, []{return rv32_64i::or_inst(0xAAAAAAAAAAAAAAAAULL, 0x5555555555555555ULL);}, "or (1)"); // OR
+    expect<uint64_t>(0xAAAAAAAAAAAAAAAAULL, []{return rv32_64i::or_inst(0xAAAAAAAAAAAAAAAAULL, 0xAAAAAAAAAAAAAAAAULL);}, "or (A)"); // OR
+    expect<uint64_t>(0, []{return rv32_64i::and_inst(-1, 0);}, "and (0)"); // AND
+    expect<uint64_t>(0x1234567812345678ULL, []{return rv32_64i::and_inst(0x1234567812345678ULL, -1);}, "and (-1)"); // AND
     // TODO: FENCE
     // TODO: FENCE.I
     // Assume ecall works if the various print statements work
@@ -188,102 +188,102 @@ int main()
     expect<int64_t>(0, []{SHIFTIW("sraiw", int32_t, 255, -1, 8);}, "sraiw, erase"); // SRAIW
     expect<int64_t>(-1, []{SHIFTIW("sraiw", int32_t, numeric_limits<int32_t>::min(), 0, 31);}, "sraiw, negative"); // SRAIW
     expect<int64_t>(-1, []{SHIFTIW("sraiw", int64_t, 0x0000000180000000LL, 0, 31);}, "sraiw, truncate"); // SRAIW
-    expect<int64_t>(1073742078, []{ADDW(int32_t, 0x3FFFFFFF, 255, 0);}, "addw"); // ADDW
-    expect<int64_t>(-1, []{ADDW(int32_t, 0x7FFFFFFF, 0x80000000, 0);}, "addw, overflow"); // ADDW
-    expect<int64_t>(65536, []{ADDW(int64_t, 0xFFFFFFFF0000FFFFLL, 1, 0);}, "addw, truncate"); // ADDW
-    expect<int64_t>(65535, []{SUBW(uint32_t, 65536, 1, 0);}, "subw"); // SUBW
-    expect<int64_t>(-1, []{SUBW(uint32_t, 0x7FFFFFFF, 0x80000000, 0);}, "subw, \"overflow\""); // SUBW
-    expect<int64_t>(0, []{SUBW(uint64_t, 0xAAAAAAAAFFFFFFFFULL, 0x55555555FFFFFFFFULL, -1);}, "subw, truncate"); // SUBW
-    expect<int64_t>(65280, []{SHIFTW("sllw", int32_t, 255, 8, 0);}, "sllw, general"); // SLLW
-    expect<int64_t>(numeric_limits<int32_t>::min(), []{SHIFTW("sllw", int32_t, 255, 31, 0);}, "sllw, erase"); // SLLW
-    expect<int64_t>(numeric_limits<int32_t>::min(), []{SHIFTW("sllw", int64_t, 0xFFFFFFFF00008000LL, 16, 0);}, "sllw, truncate"); // SLLW
-    expect<int64_t>(255, []{SHIFTW("srlw", int32_t, 65280, 8, 0);}, "srlw, general"); // SRLW
-    expect<int64_t>(0, []{SHIFTW("srlw", int32_t, 255, 8, -1);}, "srlw, erase"); // SRLW
-    expect<int64_t>(1, []{SHIFTW("srlw", int32_t, numeric_limits<int32_t>::min(), 31, 0);}, "srlw, negative"); // SRLW
-    expect<int64_t>(1, []{SHIFTW("srlw", int64_t, 0x0000000180000000LL, 31, 0);}, "srlw, truncate"); // SRLW
-    expect<int64_t>(255, []{SHIFTW("sraw", int32_t, 65280, 8, 0);}, "sraw, general"); // SRAW
-    expect<int64_t>(0, []{SHIFTW("sraw", int32_t, 255, 8, -1);}, "sraw, erase"); // SRAW
-    expect<int64_t>(-1, []{SHIFTW("sraw", int32_t, numeric_limits<int32_t>::min(), 31, 0);}, "sraw, negative"); // SRAW
-    expect<int64_t>(1, []{SHIFTW("sraw", int64_t, 0xFFFFFFFF40000000LL, 30, 0);}, "sraw, truncate"); // SRAW
+    expect<int64_t>(1073742078, []{return rv32_64i::addw(0x3FFFFFFF, 255);}, "addw"); // ADDW
+    expect<int64_t>(-1, []{return rv32_64i::addw(0x7FFFFFFF, 0x80000000);}, "addw, overflow"); // ADDW
+    expect<int64_t>(65536, []{return rv32_64i::addw(0xFFFFFFFF0000FFFFLL, 1);}, "addw, truncate"); // ADDW
+    expect<int64_t>(65535, []{return rv32_64i::subw(65536, 1);}, "subw"); // SUBW
+    expect<int64_t>(-1, []{return rv32_64i::subw(0x7FFFFFFF, 0x80000000);}, "subw, \"overflow\""); // SUBW
+    expect<int64_t>(0, []{return rv32_64i::subw(0xAAAAAAAAFFFFFFFFULL, 0x55555555FFFFFFFFULL);}, "subw, truncate"); // SUBW
+    expect<int64_t>(65280, []{return rv32_64i::sllw(255, 8);}, "sllw, general"); // SLLW
+    expect<int64_t>(numeric_limits<int32_t>::min(), []{return rv32_64i::sllw(255, 31);}, "sllw, erase"); // SLLW
+    expect<int64_t>(numeric_limits<int32_t>::min(), []{return rv32_64i::sllw(0xFFFFFFFF00008000LL, 16);}, "sllw, truncate"); // SLLW
+    expect<uint64_t>(255, []{return rv32_64i::srlw(65280, 8);}, "srlw, general"); // SRLW
+    expect<uint64_t>(0, []{return rv32_64i::srlw(255, 8);}, "srlw, erase"); // SRLW
+    expect<uint64_t>(1, []{return rv32_64i::srlw(numeric_limits<int32_t>::min(), 31);}, "srlw, negative"); // SRLW
+    expect<uint64_t>(1, []{return rv32_64i::srlw(0x0000000180000000LL, 31);}, "srlw, truncate"); // SRLW
+    expect<int64_t>(255, []{return rv32_64i::sraw(65280, 8);}, "sraw, general"); // SRAW
+    expect<int64_t>(0, []{return rv32_64i::sraw(255, 8);}, "sraw, erase"); // SRAW
+    expect<int64_t>(-1, []{return rv32_64i::sraw(numeric_limits<int32_t>::min(), 31);}, "sraw, negative"); // SRAW
+    expect<int64_t>(1, []{return rv32_64i::sraw(0xFFFFFFFF40000000LL, 30);}, "sraw, truncate"); // SRAW
 
     // RV32M extension
-    expect<int64_t>(39285, []{MUL(873, 45, 0);}, "mul"); // MUL
-    expect<int64_t>(0, []{MUL(0x4000000000000000LL, 4, -1);}, "mul, overflow"); // MUL
-    expect<int64_t>(1, []{MULH(0x4000000000000000LL, 4, 0);}, "mulh"); // MULH
-    expect<int64_t>(-1, []{MULH(numeric_limits<int64_t>::min(), 2, 0);}, "mulh, negative"); // MULH
-    expect<int64_t>(0, []{MULH(-1, -1, -1);}, "mulh, all bits set"); // MULH
-    expect<int64_t>(-1, []{MULHSU(-1, -1, 0);}, "mulhsu, all bits set"); // MULHSU
-    expect<int64_t>(-1, []{MULHSU(numeric_limits<int64_t>::min(), 2, 0);}, "mulhsu"); // MULHSU
-    expect<uint64_t>(1, []{MULHU(0x8000000000000000ULL, 2, 0);}, "mulhu"); // MULHU
-    expect<uint64_t>(0xFFFFFFFFFFFFFFFEULL, []{MULHU(-1, -1, 0);}, "mulhu, all bits set"); // MULHU
-    expect<int64_t>(-7, []{DIV(-59, 8, 0);}, "div"); // DIV
-    expect<int64_t>(-1, []{DIV(255, 0, 0);}, "div/0"); // DIV
-    expect<int64_t>(numeric_limits<int64_t>::min(), []{DIV(numeric_limits<int64_t>::min(), -1, 0);}, "div, overflow"); // DIV
-    expect<uint64_t>(2305843009213693944LL, []{DIVU(-59, 8, 0);}, "divu"); // DIVU
-    expect<uint64_t>(numeric_limits<uint64_t>::max(), []{DIVU(255, 0, 0);}, "divu/0"); // DIVU
-    expect<uint64_t>(0, []{DIVU(numeric_limits<uint64_t>::min(), -1, -1);}, "divu, \"overflow\""); // DIVU
-    expect<int64_t>(-3, []{REM(-59, 8, 0);}, "rem"); // REM
-    expect<int64_t>(255, []{REM(255, 0, 0);}, "rem/0"); // REM
-    expect<int64_t>(0, []{REM(numeric_limits<int64_t>::min(), -1, -1);}, "rem, overflow"); // REM
-    expect<uint64_t>(5, []{REMU(-59, 8, 0);}, "remu"); // REMU
-    expect<uint64_t>(255, []{REMU(255, 0, 0);}, "remu/0"); // REMU
-    expect<uint64_t>(0x8000000000000000ULL, []{REMU(0x8000000000000000ULL, -1, 0);}, "remu, \"overflow\""); // REMU
+    expect<int64_t>(39285, []{return rv32_64m::mul(873, 45);}, "mul"); // MUL
+    expect<int64_t>(0, []{return rv32_64m::mul(0x4000000000000000LL, 4);}, "mul, overflow"); // MUL
+    expect<int64_t>(1, []{return rv32_64m::mulh(0x4000000000000000LL, 4);}, "mulh"); // MULH
+    expect<int64_t>(-1, []{return rv32_64m::mulh(numeric_limits<int64_t>::min(), 2);}, "mulh, negative"); // MULH
+    expect<int64_t>(0, []{return rv32_64m::mulh(-1, -1);}, "mulh, all bits set"); // MULH
+    expect<int64_t>(-1, []{return rv32_64m::mulhsu(-1, -1);}, "mulhsu, all bits set"); // MULHSU
+    expect<int64_t>(-1, []{return rv32_64m::mulhsu(numeric_limits<int64_t>::min(), 2);}, "mulhsu"); // MULHSU
+    expect<uint64_t>(1, []{return rv32_64m::mulhu(0x8000000000000000ULL, 2);}, "mulhu"); // MULHU
+    expect<uint64_t>(0xFFFFFFFFFFFFFFFEULL, []{return rv32_64m::mulhu(-1, -1);}, "mulhu, all bits set"); // MULHU
+    expect<int64_t>(-7, []{return rv32_64m::div(-59, 8);}, "div"); // DIV
+    expect<int64_t>(-1, []{return rv32_64m::div(255, 0);}, "div/0"); // DIV
+    expect<int64_t>(numeric_limits<int64_t>::min(), []{return rv32_64m::div(numeric_limits<int64_t>::min(), -1);}, "div, overflow"); // DIV
+    expect<uint64_t>(2305843009213693944LL, []{return rv32_64m::divu(-59, 8);}, "divu"); // DIVU
+    expect<uint64_t>(numeric_limits<uint64_t>::max(), []{return rv32_64m::divu(255, 0);}, "divu/0"); // DIVU
+    expect<uint64_t>(0, []{return rv32_64m::divu(numeric_limits<uint64_t>::min(), -1);}, "divu, \"overflow\""); // DIVU
+    expect<int64_t>(-3, []{return rv32_64m::rem(-59, 8);}, "rem"); // REM
+    expect<int64_t>(255, []{return rv32_64m::rem(255, 0);}, "rem/0"); // REM
+    expect<int64_t>(0, []{return rv32_64m::rem(numeric_limits<int64_t>::min(), -1);}, "rem, overflow"); // REM
+    expect<uint64_t>(5, []{return rv32_64m::remu(-59, 8);}, "remu"); // REMU
+    expect<uint64_t>(255, []{return rv32_64m::remu(255, 0);}, "remu/0"); // REMU
+    expect<uint64_t>(0x8000000000000000ULL, []{return rv32_64m::remu(0x8000000000000000ULL, -1);}, "remu, \"overflow\""); // REMU
 
     // RV64M extension
-    expect<int64_t>(-100, []{MULW(int64_t, 0x7FFFFFFF00000005LL, 0x80000000FFFFFFECLL, 0);}, "mulw, truncate"); // MULW
-    expect<int64_t>(0, []{MULW(int32_t, 0x40000000, 4, -1);}, "mulw, overflow"); // MULW
-    expect<int64_t>(-7, []{DIVW(int64_t, 0x7FFFFFFFFFFFFFC5LL, 0xFFFFFFFF00000008LL, 0);}, "divw, truncate"); // DIVW
-    expect<int64_t>(-1, []{DIVW(int32_t, 65535, 0, 0);}, "divw/0"); // DIVW
-    expect<int64_t>(numeric_limits<int32_t>::min(), []{DIVW(int32_t, numeric_limits<int32_t>::min(), -1, 0);}, "divw, overflow"); // DIVW
-    expect<int64_t>(536870904, []{DIVUW(int64_t, 0x7FFFFFFFFFFFFFC5LL, 0xFFFFFFFF00000008LL, 0);}, "divuw, truncate"); // DIVUW
-    expect<int64_t>(numeric_limits<uint64_t>::max(), []{DIVUW(uint32_t, 65535, 0, 0);}, "divuw/0"); // DIVUW
-    expect<int64_t>(0, []{DIVUW(uint32_t, numeric_limits<int32_t>::min(), -1, 0);}, "divuw, \"overflow\""); // DIVUW
-    expect<int64_t>(-1, []{DIVUW(uint32_t, numeric_limits<uint32_t>::max(), 1, 0);}, "divuw, sign extend"); // DIVUW
-    expect<int64_t>(-3, []{REMW(int64_t, 0x7FFFFFFFFFFFFFC5LL, 0xFFFFFFFF00000008LL, 0);}, "remw, truncate"); // REMW
-    expect<int64_t>(65535, []{REMW(int32_t, 65535, 0, 0);}, "remw/0"); // REMW
-    expect<int64_t>(0, []{REMW(int32_t, numeric_limits<int32_t>::min(), -1, 0);}, "remw, overflow"); // REMW
-    expect<int64_t>(5, []{REMUW(int64_t, 0x7FFFFFFFFFFFFFC5LL, 0xFFFFFFFF00000008LL, 0);}, "remuw, truncate"); // REMUW
-    expect<int64_t>(65535, []{REMUW(uint32_t, 65535, 0, 0);}, "remuw/0"); // REMUW
-    expect<int64_t>(numeric_limits<int32_t>::min(), []{REMUW(uint32_t, numeric_limits<int32_t>::min(), -1, 0);}, "remuw, \"overflow\""); // REMUW
-    expect<int64_t>(0xFFFFFFFF80000000, []{REMUW(uint32_t, 0x80000000, 0xFFFFFFFF, 0);}, "remuw, sign extend"); // REMUW
+    expect<int64_t>(-100, []{return rv32_64m::mulw(0x7FFFFFFF00000005LL, 0x80000000FFFFFFECLL);}, "mulw, truncate"); // MULW
+    expect<int64_t>(0, []{return rv32_64m::mulw(0x40000000, 4);}, "mulw, overflow"); // MULW
+    expect<int64_t>(-7, []{return rv32_64m::divw(0x7FFFFFFFFFFFFFC5LL, 0xFFFFFFFF00000008LL);}, "divw, truncate"); // DIVW
+    expect<int64_t>(-1, []{return rv32_64m::divw(65535, 0);}, "divw/0"); // DIVW
+    expect<int64_t>(numeric_limits<int32_t>::min(), []{return rv32_64m::divw(numeric_limits<int32_t>::min(), -1);}, "divw, overflow"); // DIVW
+    expect<int64_t>(536870904, []{return rv32_64m::divuw(0x7FFFFFFFFFFFFFC5LL, 0xFFFFFFFF00000008LL);}, "divuw, truncate"); // DIVUW
+    expect<int64_t>(numeric_limits<uint64_t>::max(), []{return rv32_64m::divuw(65535, 0);}, "divuw/0"); // DIVUW
+    expect<int64_t>(0, []{return rv32_64m::divuw(numeric_limits<int32_t>::min(), -1);}, "divuw, \"overflow\""); // DIVUW
+    expect<int64_t>(-1, []{return rv32_64m::divuw(numeric_limits<uint32_t>::max(), 1);}, "divuw, sign extend"); // DIVUW
+    expect<int64_t>(-3, []{return rv32_64m::remw(0x7FFFFFFFFFFFFFC5LL, 0xFFFFFFFF00000008LL);}, "remw, truncate"); // REMW
+    expect<int64_t>(65535, []{return rv32_64m::remw(65535, 0);}, "remw/0"); // REMW
+    expect<int64_t>(0, []{return rv32_64m::remw(numeric_limits<int32_t>::min(), -1);}, "remw, overflow"); // REMW
+    expect<int64_t>(5, []{return rv32_64m::remuw(0x7FFFFFFFFFFFFFC5LL, 0xFFFFFFFF00000008LL);}, "remuw, truncate"); // REMUW
+    expect<int64_t>(65535, []{return rv32_64m::remuw(65535, 0);}, "remuw/0"); // REMUW
+    expect<int64_t>(numeric_limits<int32_t>::min(), []{return rv32_64m::remuw(numeric_limits<int32_t>::min(), -1);}, "remuw, \"overflow\""); // REMUW
+    expect<int64_t>(0xFFFFFFFF80000000, []{return rv32_64m::remuw(0x80000000, 0xFFFFFFFF);}, "remuw, sign extend"); // REMUW
 
     // RV32A extension
     // TODO: Test that these are actually atomic (add aq and rl instruction extensions)
     // TODO: LR.W, SC.W
-    expect<pair<int64_t, int64_t>>({65535, 255}, []{AMOSWAP_W(uint32_t, 255, 65535, 0);}, "amoswap.w"); // AMOSWAP.W
-    expect<pair<int64_t, int64_t>>({0xFFFFFFFF, -1}, []{AMOSWAP_W(uint32_t, 0xFFFFFFFF, 0xFFFFFFFF, 0);}, "amoswap.w, sign extend"); // AMOSWAP.W
-    expect<pair<int64_t, int64_t>>({0x0000000180000000LL, -1}, []{AMOSWAP_W(int64_t, 0x00000001FFFFFFFFLL, 0x7FFFFFFF80000000LL, 0);}, "amoswap.w, truncate"); // AMOSWAP.W
-    expect<pair<int64_t, int64_t>>({256, 255}, []{AMOADD_W(int32_t, 255, 1, 0);}, "amoadd.w"); // AMOADD.W
-    expect<pair<int64_t, int64_t>>({0, -1}, []{AMOADD_W(int32_t, 0xFFFFFFFF, 1, 0);}, "amoadd.w, truncate/overflow"); // AMOADD.W
-    expect<pair<int64_t, int64_t>>({0xFFFFFFFF, 0x7FFFFFFF}, []{AMOADD_W(int64_t, 0x7FFFFFFF, 0x80000000, 0);}, "amoadd.w, sign extend"); // AMOADD.W
-    expect<pair<int64_t, int64_t>>({0xFFFFFFFFAAAAAAAALL, -1}, []{AMOXOR_W(int64_t, -1, 0x5555555555555555LL, 0);}, "amoxor.w, truncate"); // AMOXOR.W
-    expect<pair<int64_t, int64_t>>({0x80000000, -1}, []{AMOXOR_W(int32_t, 0xFFFFFFFF, 0x7FFFFFFF, 0);}, "amoxor.w, sign extend"); // AMOXOR.W
-    expect<pair<int64_t, int64_t>>({0xFFFFFFFF00000000LL, -1}, []{AMOAND_W(int64_t, -1, 0, 0);}, "amoand.w, truncate"); // AMOAND.W
-    expect<pair<int64_t, int64_t>>({0x0000000080000000LL, -1}, []{AMOAND_W(int32_t, 0xFFFFFFFF, numeric_limits<int32_t>::min(), 0);}, "amoand.w, sign extend"); // AMOAND.W
-    expect<pair<int64_t, int64_t>>({0x00000000FFFFFFFFLL, 0}, []{AMOOR_W(int64_t, 0, -1, -1);}, "amoor.w, truncate"); // AMOOR.W
-    expect<pair<int64_t, int64_t>>({0x0000000080000000LL, 0}, []{AMOOR_W(int32_t, 0, numeric_limits<int32_t>::min(), -1);}, "amoor.w, sign extend"); // AMOOR.W
-    expect<pair<int64_t, int64_t>>({0x7FFFFFFF00000001LL, 1}, []{AMOMIN_W(int64_t, 0x7FFFFFFF00000001LL, 0xFFFFFFFF000000FF, 0);}, "amomin.w, truncate"); // AMOMIN.W
-    expect<pair<int64_t, int64_t>>({0x00000000FFFFFFFELL, -1}, []{AMOMIN_W(int32_t, 0xFFFFFFFF, -2, 0);}, "amomin.w, sign extend"); // AMOMIN.W
-    expect<pair<int64_t, int64_t>>({0x70000000000000FFLL, 1}, []{AMOMAX_W(int64_t, 0x7000000000000001LL, 0x7FFFFFFF000000FFLL, 0);}, "amomax.w, truncate"); // AMOMAX.W
-    expect<pair<int64_t, int64_t>>({0x00000000FFFFFFFFLL, numeric_limits<int32_t>::min()}, []{AMOMAX_W(int32_t, 0x80000000, -1, -1);}, "amomax.w, sign extend"); // AMOMAX.W
-    expect<pair<int64_t, int64_t>>({0x0FFFFFFF000000FFLL, -1}, []{AMOMINU_W(int64_t, 0x0FFFFFFFFFFFFFFFLL, 0xFFFFFFFF000000FF, 0);}, "amominu.w, truncate"); // AMOMINU.W
-    expect<pair<int64_t, int64_t>>({0x0000000080000000LL, -1}, []{AMOMINU_W(int32_t, 0x00000000FFFFFFFFLL, 0x80000000, 0);}, "amominu.w, sign extend"); // AMOMINU.W
-    expect<pair<int64_t, int64_t>>({-1, 0}, []{AMOMAXU_W(int64_t, 0xFFFFFFFF00000000LL, 0x00000000FFFFFFFFLL, -1);}, "amomaxu.w, truncate"); // AMOMAXU.W
-    expect<pair<int64_t, int64_t>>({0xFFFFFFFF, numeric_limits<int32_t>::min()}, []{AMOMAXU_W(int32_t, 0x80000000, 0xFFFFFFFF, -1);}, "amomaxu.w, sign extend"); // AMOMAXU.W
+    expect<pair<int64_t, int64_t>>({65535, 255}, []{return rv32_64a::amoswap_w(255, 65535);}, "amoswap.w"); // AMOSWAP.W
+    expect<pair<int64_t, int64_t>>({0xFFFFFFFF, -1}, []{return rv32_64a::amoswap_w(0xFFFFFFFF, 0xFFFFFFFF);}, "amoswap.w, sign extend"); // AMOSWAP.W
+    expect<pair<int64_t, int64_t>>({0x0000000180000000LL, -1}, []{return rv32_64a::amoswap_w(0x00000001FFFFFFFFLL, 0x7FFFFFFF80000000LL);}, "amoswap.w, truncate"); // AMOSWAP.W
+    expect<pair<int64_t, int64_t>>({256, 255}, []{return rv32_64a::amoadd_w(255, 1);}, "amoadd.w"); // AMOADD.W
+    expect<pair<int64_t, int64_t>>({0, -1}, []{return rv32_64a::amoadd_w(0xFFFFFFFF, 1);}, "amoadd.w, truncate/overflow"); // AMOADD.W
+    expect<pair<int64_t, int64_t>>({0xFFFFFFFF, 0x7FFFFFFF}, []{return rv32_64a::amoadd_w(0x7FFFFFFF, 0x80000000);}, "amoadd.w, sign extend"); // AMOADD.W
+    expect<pair<uint64_t, uint64_t>>({0xFFFFFFFFAAAAAAAALL, -1}, []{return rv32_64a::amoxor_w(-1, 0x5555555555555555LL);}, "amoxor.w, truncate"); // AMOXOR.W
+    expect<pair<uint64_t, uint64_t>>({0x80000000, -1}, []{return rv32_64a::amoxor_w(0xFFFFFFFF, 0x7FFFFFFF);}, "amoxor.w, sign extend"); // AMOXOR.W
+    expect<pair<uint64_t, uint64_t>>({0xFFFFFFFF00000000LL, -1}, []{return rv32_64a::amoand_w(-1, 0);}, "amoand.w, truncate"); // AMOAND.W
+    expect<pair<uint64_t, uint64_t>>({0x0000000080000000LL, -1}, []{return rv32_64a::amoand_w(0xFFFFFFFF, numeric_limits<int32_t>::min());}, "amoand.w, sign extend"); // AMOAND.W
+    expect<pair<uint64_t, uint64_t>>({0x00000000FFFFFFFFLL, 0}, []{return rv32_64a::amoor_w(0, -1);}, "amoor.w, truncate"); // AMOOR.W
+    expect<pair<uint64_t, uint64_t>>({0x0000000080000000LL, 0}, []{return rv32_64a::amoor_w(0, numeric_limits<int32_t>::min());}, "amoor.w, sign extend"); // AMOOR.W
+    expect<pair<int64_t, int64_t>>({0x7FFFFFFF00000001LL, 1}, []{return rv32_64a::amomin_w(0x7FFFFFFF00000001LL, 0xFFFFFFFF000000FF);}, "amomin.w, truncate"); // AMOMIN.W
+    expect<pair<int64_t, int64_t>>({0x00000000FFFFFFFELL, -1}, []{return rv32_64a::amomin_w(0xFFFFFFFF, -2);}, "amomin.w, sign extend"); // AMOMIN.W
+    expect<pair<int64_t, int64_t>>({0x70000000000000FFLL, 1}, []{return rv32_64a::amomax_w(0x7000000000000001LL, 0x7FFFFFFF000000FFLL);}, "amomax.w, truncate"); // AMOMAX.W
+    expect<pair<int64_t, int64_t>>({-1, numeric_limits<int32_t>::min()}, []{return rv32_64a::amomax_w(numeric_limits<int32_t>::min(), -1);}, "amomax.w, sign extend"); // AMOMAX.W
+    expect<pair<uint64_t, uint64_t>>({0x0FFFFFFF000000FFLL, -1}, []{return rv32_64a::amominu_w(0x0FFFFFFFFFFFFFFFLL, 0xFFFFFFFF000000FF);}, "amominu.w, truncate"); // AMOMINU.W
+    expect<pair<uint64_t, uint64_t>>({0x0000000080000000LL, -1}, []{return rv32_64a::amominu_w(0x00000000FFFFFFFFLL, 0x80000000);}, "amominu.w, sign extend"); // AMOMINU.W
+    expect<pair<uint64_t, uint64_t>>({-1, 0}, []{return rv32_64a::amomaxu_w(0xFFFFFFFF00000000LL, 0x00000000FFFFFFFFLL);}, "amomaxu.w, truncate"); // AMOMAXU.W
+    expect<pair<uint64_t, uint64_t>>({0xFFFFFFFF, numeric_limits<int32_t>::min()}, []{return rv32_64a::amomaxu_w(0x80000000, 0xFFFFFFFF);}, "amomaxu.w, sign extend"); // AMOMAXU.W
 
     // RV64A extension
     // TODO: LR.D, SC.D
-    expect<pair<int64_t, int64_t>>({1, -1}, []{AMOSWAP_D(-1, 1, 0);}, "amoswap.d"); // AMOSWAP.D
-    expect<pair<int64_t, int64_t>>({0x7000000000000000LL, 0x0FFFFFFFFFFFFFFFLL}, []{AMOADD_D(0x0FFFFFFFFFFFFFFFLL, 0x6000000000000001LL, 0);}, "amoadd.d"); // AMOADD.D
-    expect<pair<int64_t, int64_t>>({0, 0x7FFFFFFFFFFFFFFFLL}, []{AMOADD_D(0x7FFFFFFFFFFFFFFFLL, 0x8000000000000001LL, 0);}, "amoadd.d, overflow"); // AMOADD.D
-    expect<pair<int64_t, int64_t>>({-1, 0xAAAAAAAAAAAAAAAALL}, []{AMOXOR_D(0xAAAAAAAAAAAAAAAALL, 0x5555555555555555LL, 0);}, "amoxor.d (1)"); // AMOXOR.D
-    expect<pair<int64_t, int64_t>>({0, 0xAAAAAAAAAAAAAAAALL}, []{AMOXOR_D(0xAAAAAAAAAAAAAAAALL, 0xAAAAAAAAAAAAAAAALL, 0);}, "amoxor.d (0)"); // AMOXOR.D
-    expect<pair<int64_t, int64_t>>({0xAAAAAAAAAAAAAAAALL, -1}, []{AMOAND_D(-1, 0xAAAAAAAAAAAAAAAALL, 0);}, "amoand.d"); // AMOAND.D
-    expect<pair<int64_t, int64_t>>({-1, 0xAAAAAAAAAAAAAAAALL}, []{AMOOR_D(0xAAAAAAAAAAAAAAAALL, 0x5555555555555555LL, 0);}, "amoor.d"); // AMOOR.D
-    expect<pair<int64_t, int64_t>>({-1, -1}, []{AMOMIN_D(-1, 0, 0);}, "amomin.d"); // AMOMIN.D
-    expect<pair<int64_t, int64_t>>({0, -1}, []{AMOMAX_D(-1, 0, 0);}, "amomax.d"); // AMOMAX.D
-    expect<pair<uint64_t, uint64_t>>({0, -1}, []{AMOMINU_D(-1, 0, 0);}, "amominu.d"); // AMOMINU.D
-    expect<pair<uint64_t, uint64_t>>({-1, -1}, []{AMOMAXU_D(-1, 0, 0);}, "amomaxu.d"); // AMOMAXU.D
+    expect<pair<int64_t, int64_t>>({1, -1}, []{return rv32_64a::amoswap_d(-1, 1);}, "amoswap.d"); // AMOSWAP.D
+    expect<pair<int64_t, int64_t>>({0x7000000000000000LL, 0x0FFFFFFFFFFFFFFFLL}, []{return rv32_64a::amoadd_d(0x0FFFFFFFFFFFFFFFLL, 0x6000000000000001LL);}, "amoadd.d"); // AMOADD.D
+    expect<pair<int64_t, int64_t>>({0, 0x7FFFFFFFFFFFFFFFLL}, []{return rv32_64a::amoadd_d(0x7FFFFFFFFFFFFFFFLL, 0x8000000000000001LL);}, "amoadd.d, overflow"); // AMOADD.D
+    expect<pair<int64_t, int64_t>>({-1, 0xAAAAAAAAAAAAAAAALL}, []{return rv32_64a::amoxor_d(0xAAAAAAAAAAAAAAAALL, 0x5555555555555555LL);}, "amoxor.d (1)"); // AMOXOR.D
+    expect<pair<int64_t, int64_t>>({0, 0xAAAAAAAAAAAAAAAALL}, []{return rv32_64a::amoxor_d(0xAAAAAAAAAAAAAAAALL, 0xAAAAAAAAAAAAAAAALL);}, "amoxor.d (0)"); // AMOXOR.D
+    expect<pair<int64_t, int64_t>>({0xAAAAAAAAAAAAAAAALL, -1}, []{return rv32_64a::amoand_d(-1, 0xAAAAAAAAAAAAAAAALL);}, "amoand.d"); // AMOAND.D
+    expect<pair<int64_t, int64_t>>({-1, 0xAAAAAAAAAAAAAAAALL}, []{return rv32_64a::amoor_d(0xAAAAAAAAAAAAAAAALL, 0x5555555555555555LL);}, "amoor.d"); // AMOOR.D
+    expect<pair<int64_t, int64_t>>({-1, -1}, []{return rv32_64a::amomin_d(-1, 0);}, "amomin.d"); // AMOMIN.D
+    expect<pair<int64_t, int64_t>>({0, -1}, []{return rv32_64a::amomax_d(-1, 0);}, "amomax.d"); // AMOMAX.D
+    expect<pair<uint64_t, uint64_t>>({0, -1}, []{return rv32_64a::amominu_d(-1, 0);}, "amominu.d"); // AMOMINU.D
+    expect<pair<uint64_t, uint64_t>>({-1, -1}, []{return rv32_64a::amomaxu_d(-1, 0);}, "amomaxu.d"); // AMOMAXU.D
 
     // RV32F extension
     // TODO: Figure out how to test the rounding mode capabilities

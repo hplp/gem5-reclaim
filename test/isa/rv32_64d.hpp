@@ -30,7 +30,7 @@ namespace rv32_64d
     inline double load(double mem)
     {
         double fd = std::numeric_limits<double>::signaling_NaN();
-        asm("fld %0,%1"
+        asm volatile("fld %0,%1"
             : "=f" (fd)
             : "m" (mem));
         return fd;
@@ -39,7 +39,7 @@ namespace rv32_64d
     inline double store(double fs)
     {
         double mem = std::numeric_limits<double>::signaling_NaN();
-        asm("fsd %0,%1"
+        asm volatile("fsd %0,%1"
             :
             : "f" (fs), "m" (mem));
         return mem;
@@ -113,7 +113,7 @@ namespace rv32_64d
     {
         rv32_64f::fsflags(0);
         double fd = std::numeric_limits<double>::signaling_NaN();
-        asm("fsqrt.d %0,%1" : "=f" (fd) : "f" (fs1));
+        asm volatile("fsqrt.d %0,%1" : "=f" (fd) : "f" (fs1));
         return {fd, rv32_64f::frflags()};
     }
 
@@ -161,7 +161,7 @@ namespace rv32_64d
     {
         rv32_64f::fsflags(0);
         float fd = std::numeric_limits<float>::signaling_NaN();
-        asm("fcvt.s.d %0,%1" : "=f" (fd) : "f" (fs1));
+        asm volatile("fcvt.s.d %0,%1" : "=f" (fd) : "f" (fs1));
         return {fd, rv32_64f::frflags()};
     }
     
@@ -169,7 +169,7 @@ namespace rv32_64d
     {
         rv32_64f::fsflags(0);
         double fd = std::numeric_limits<double>::signaling_NaN();
-        asm("fcvt.d.s %0,%1" : "=f" (fd) : "f" (fs1));
+        asm volatile("fcvt.d.s %0,%1" : "=f" (fd) : "f" (fs1));
         return {fd, rv32_64f::frflags()};
     }
 
@@ -177,7 +177,7 @@ namespace rv32_64d
     {
         rv32_64f::fsflags(0);
         bool rd = false;
-        asm("feq.d %0,%1,%2" : "=r" (rd) : "f" (fs1), "f" (fs2));
+        asm volatile("feq.d %0,%1,%2" : "=r" (rd) : "f" (fs1), "f" (fs2));
         return {rd, rv32_64f::frflags()};
     }
     
@@ -185,7 +185,7 @@ namespace rv32_64d
     {
         rv32_64f::fsflags(0);
         bool rd = false;
-        asm("flt.d %0,%1,%2" : "=r" (rd) : "f" (fs1), "f" (fs2));
+        asm volatile("flt.d %0,%1,%2" : "=r" (rd) : "f" (fs1), "f" (fs2));
         return {rd, rv32_64f::frflags()};
     }
     
@@ -193,14 +193,14 @@ namespace rv32_64d
     {
         rv32_64f::fsflags(0);
         bool rd = false;
-        asm("fle.d %0,%1,%2" : "=r" (rd) : "f" (fs1), "f" (fs2));
+        asm volatile("fle.d %0,%1,%2" : "=r" (rd) : "f" (fs1), "f" (fs2));
         return {rd, rv32_64f::frflags()};
     }
 
     inline uint64_t fclass_d(double fs1)
     {
         uint64_t rd = -1;
-        asm("fclass.d %0,%1" : "=r" (rd) : "f" (fs1));
+        asm volatile("fclass.d %0,%1" : "=r" (rd) : "f" (fs1));
         return rd;
     }
 
@@ -208,7 +208,7 @@ namespace rv32_64d
     {
         rv32_64f::fsflags(0);
         int64_t rd = 0;
-        asm("fcvt.w.d %0,%1" : "=r" (rd) : "f" (fs1));
+        asm volatile("fcvt.w.d %0,%1" : "=r" (rd) : "f" (fs1));
         return {rd, rv32_64f::frflags()};
     }
 
@@ -216,21 +216,21 @@ namespace rv32_64d
     {
         rv32_64f::fsflags(0);
         uint64_t rd = 0;
-        asm("fcvt.wu.d %0,%1" : "=r" (rd) : "f" (fs1));
+        asm volatile("fcvt.wu.d %0,%1" : "=r" (rd) : "f" (fs1));
         return {rd, rv32_64f::frflags()};
     }
 
     inline float fcvt_d_w(int64_t rs1)
     {
         double fd = std::numeric_limits<double>::signaling_NaN();
-        asm("fcvt.d.w %0,%1" : "=f" (fd) : "r" (rs1));
+        asm volatile("fcvt.d.w %0,%1" : "=f" (fd) : "r" (rs1));
         return fd;
     }
 
     inline double fcvt_d_wu(uint64_t rs1)
     {
         double fd = std::numeric_limits<double>::signaling_NaN();
-        asm("fcvt.d.wu %0,%1" : "=f" (fd) : "r" (rs1));
+        asm volatile("fcvt.d.wu %0,%1" : "=f" (fd) : "r" (rs1));
         return fd;
     }
 
@@ -238,7 +238,7 @@ namespace rv32_64d
     {
         rv32_64f::fsflags(0);
         int64_t rd = 0;
-        asm("fcvt.l.d %0,%1" : "=r" (rd) : "f" (fs1));
+        asm volatile("fcvt.l.d %0,%1" : "=r" (rd) : "f" (fs1));
         return {rd, rv32_64f::frflags()};
     }
 
@@ -246,35 +246,35 @@ namespace rv32_64d
     {
         rv32_64f::fsflags(0);
         uint64_t rd = 0;
-        asm("fcvt.lu.d %0,%1" : "=r" (rd) : "f" (fs1));
+        asm volatile("fcvt.lu.d %0,%1" : "=r" (rd) : "f" (fs1));
         return {rd, rv32_64f::frflags()};
     }
 
     inline uint64_t fmv_x_d(double fs1)
     {
         uint64_t rd = 0;
-        asm("fmv.x.d %0,%1" : "=r" (rd) : "f" (fs1));
+        asm volatile("fmv.x.d %0,%1" : "=r" (rd) : "f" (fs1));
         return rd;
     }
 
     inline double fcvt_d_l(int64_t rs1)
     {
         double fd = std::numeric_limits<double>::signaling_NaN();
-        asm("fcvt.d.l %0,%1" : "=f" (fd) : "r" (rs1));
+        asm volatile("fcvt.d.l %0,%1" : "=f" (fd) : "r" (rs1));
         return fd;
     }
 
     inline double fcvt_d_lu(uint64_t rs1)
     {
         double fd = std::numeric_limits<double>::signaling_NaN();
-        asm("fcvt.d.lu %0,%1" : "=f" (fd) : "r" (rs1));
+        asm volatile("fcvt.d.lu %0,%1" : "=f" (fd) : "r" (rs1));
         return fd;
     }
 
     inline double fmv_d_x(uint64_t rs1)
     {
         double fd = std::numeric_limits<double>::signaling_NaN();
-        asm("fmv.d.x %0,%1" : "=f" (fd) : "r" (rs1));
+        asm volatile("fmv.d.x %0,%1" : "=f" (fd) : "r" (rs1));
         return fd;
     }
 }

@@ -41,9 +41,7 @@ namespace rv32_64f
     inline float store(float fs)
     {
         float mem = std::numeric_limits<float>::signaling_NaN();
-        asm volatile("fsw %0,%1"
-            :
-            : "f" (fs), "m" (mem));
+        asm volatile("fsw %1,%0" : "=m" (mem) : "f" (fs));
         return mem;
     }
 

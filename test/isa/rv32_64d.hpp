@@ -39,9 +39,7 @@ namespace rv32_64d
     inline double store(double fs)
     {
         double mem = std::numeric_limits<double>::signaling_NaN();
-        asm volatile("fsd %0,%1"
-            :
-            : "f" (fs), "m" (mem));
+        asm volatile("fsd %1,%0" : "=m" (mem) : "f" (fs));
         return mem;
     }
 

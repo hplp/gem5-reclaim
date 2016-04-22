@@ -8,7 +8,7 @@ namespace rv32_64a
     {
         int64_t rd = 0;
         uint64_t addr = (uint64_t)&mem;
-        asm("amoswap.w %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2));
+        asm("amoswap.w %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2) : "memory");
         return {mem, rd};
     }
     
@@ -16,7 +16,7 @@ namespace rv32_64a
     {
         int64_t rd = 0;
         uint64_t addr = (uint64_t)&mem;
-        asm("amoadd.w %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2));
+        asm("amoadd.w %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2) : "memory");
         return {mem, rd};
     }
 
@@ -24,7 +24,7 @@ namespace rv32_64a
     {
         uint64_t rd = 0;
         uint64_t addr = (uint64_t)&mem;
-        asm("amoxor.w %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2));
+        asm("amoxor.w %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2) : "memory");
         return {mem, rd};
     }
     
@@ -32,7 +32,7 @@ namespace rv32_64a
     {
         uint64_t rd = 0;
         uint64_t addr = (uint64_t)&mem;
-        asm("amoand.w %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2));
+        asm("amoand.w %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2) : "memory");
         return {mem, rd};
     }
 
@@ -40,7 +40,7 @@ namespace rv32_64a
     {
         uint64_t rd = 0;
         uint64_t addr = (uint64_t)&mem;
-        asm("amoor.w %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2));
+        asm("amoor.w %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2) : "memory");
         return {mem, rd};
     }
 
@@ -48,7 +48,7 @@ namespace rv32_64a
     {
         int64_t rd = 0;
         uint64_t addr = (uint64_t)&mem;
-        asm("amomin.w %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2));
+        asm("amomin.w %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2) : "memory");
         return {mem, rd};
     }
 
@@ -56,7 +56,7 @@ namespace rv32_64a
     {
         int64_t rd = 0;
         uint64_t addr = (uint64_t)&mem;
-        asm("amomax.w %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2));
+        asm("amomax.w %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2) : "memory");
         return {mem, rd};
     }
 
@@ -64,7 +64,7 @@ namespace rv32_64a
     {
         uint64_t rd = 0;
         uint64_t addr = (uint64_t)&mem;
-        asm("amominu.w %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2));
+        asm("amominu.w %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2) : "memory");
         return {mem, rd};
     }
 
@@ -72,7 +72,7 @@ namespace rv32_64a
     {
         uint64_t rd = 0;
         uint64_t addr = (uint64_t)&mem;
-        asm("amomaxu.w %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2));
+        asm("amomaxu.w %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2) : "memory");
         return {mem, rd};
     }
 
@@ -80,7 +80,7 @@ namespace rv32_64a
     {
         int64_t rd = 0;
         uint64_t addr = (uint64_t)&mem;
-        asm("amoswap.d %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2));
+        asm("amoswap.d %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2) : "memory");
         return {mem, rd};
     }
     
@@ -88,7 +88,7 @@ namespace rv32_64a
     {
         int64_t rd = 0;
         uint64_t addr = (uint64_t)&mem;
-        asm("amoadd.d %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2));
+        asm("amoadd.d %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2) : "memory");
         return {mem, rd};
     }
 
@@ -96,7 +96,7 @@ namespace rv32_64a
     {
         uint64_t rd = 0;
         uint64_t addr = (uint64_t)&mem;
-        asm("amoxor.d %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2));
+        asm("amoxor.d %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2) : "memory");
         return {mem, rd};
     }
     
@@ -104,7 +104,7 @@ namespace rv32_64a
     {
         uint64_t rd = 0;
         uint64_t addr = (uint64_t)&mem;
-        asm("amoand.d %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2));
+        asm("amoand.d %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2) : "memory");
         return {mem, rd};
     }
 
@@ -112,7 +112,7 @@ namespace rv32_64a
     {
         uint64_t rd = 0;
         uint64_t addr = (uint64_t)&mem;
-        asm("amoor.d %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2));
+        asm("amoor.d %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2) : "memory");
         return {mem, rd};
     }
 
@@ -120,7 +120,7 @@ namespace rv32_64a
     {
         int64_t rd = 0;
         uint64_t addr = (uint64_t)&mem;
-        asm("amomin.d %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2));
+        asm("amomin.d %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2) : "memory");
         return {mem, rd};
     }
 
@@ -128,7 +128,7 @@ namespace rv32_64a
     {
         int64_t rd = 0;
         uint64_t addr = (uint64_t)&mem;
-        asm("amomax.d %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2));
+        asm("amomax.d %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2) : "memory");
         return {mem, rd};
     }
 
@@ -136,7 +136,7 @@ namespace rv32_64a
     {
         uint64_t rd = 0;
         uint64_t addr = (uint64_t)&mem;
-        asm("amominu.d %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2));
+        asm("amominu.d %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2) : "memory");
         return {mem, rd};
     }
 
@@ -144,7 +144,7 @@ namespace rv32_64a
     {
         uint64_t rd = 0;
         uint64_t addr = (uint64_t)&mem;
-        asm("amomaxu.d %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2));
+        asm("amomaxu.d %0,%2,(%1)" : "=r" (rd) : "r" (addr), "r" (rs2) : "memory");
         return {mem, rd};
     }
 }

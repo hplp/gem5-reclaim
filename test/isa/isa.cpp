@@ -55,45 +55,27 @@ int main()
     using namespace std;
 
     // RV32I (base)
-    expect<int>(4096, []{int a; asm("lui %0,0x1" : "=r" (a)); return a;}, "lui 0x1"); // LUI
-    expect<int>(-2147483648, []{int a; asm("lui %0,0x80000" : "=r" (a)); return a;}, "lui 0x80000"); // LUI
-    expect<int>(8, []{              // AUIPC and JALR
-        int a = 0;
-        asm("auipc %0,0x0;"
-            "jalr t0,%0,12;"
-            "addi %0,zero,0;"
-            "sub %0,t0,%0;"
-            : "=r" (a));
-        return a;
-    }, "auipc,jalr");
-    expect<int>(34, []{             // BEQ, BNE, BLT, BGE, BLTU, BGEU
-        int a = 45;
-        if (a < 1000)
-            a = -4;
-        if (a < -56)
-            a = 0xFFFFFF;
-        if (a == -4)
-            a = 0;
-        if (a != -4)
-            a = 0;
-        if (a > -5)
-        {
-            if (a > 5)
-                a = 1;
-            else
-                a = -1;
-        }
-        if (a != 1)
-            a = -97;
-        else
-            a = 8;
-        unsigned int b = a;
-        if (b < 45)
-            a = 100;
-        if (b < 0xFFFFFFFF)
-            a = 34;
-        return a;
-    }, "branch");
+    expect<int64_t>(4096, []{return rv32_64i::lui(1);}, "lui"); // LUI
+    expect<int64_t>(numeric_limits<int32_t>::min(), []{return rv32_64i::lui(0x80000);}, "lui, negative"); // LUI
+    expect<bool>(true, []{return rv32_64i::auipc(3);}, "auipc"); // AUIPC
+    expect<bool>(true, []{return rv32_64i::jal();}, "jal"); // JAL
+    expect<bool>(true, []{return rv32_64i::jalr();}, "jalr"); // JALR
+    expect<bool>(true, []{return rv32_64i::beq(5, 5);}, "beq, equal"); // BEQ
+    expect<bool>(false, []{return rv32_64i::beq(numeric_limits<int64_t>::max(), numeric_limits<int64_t>::min());}, "beq, not equal"); // BEQ
+    expect<bool>(false, []{return rv32_64i::bne(5, 5);}, "bne, equal"); // BNE
+    expect<bool>(true, []{return rv32_64i::bne(numeric_limits<int64_t>::max(), numeric_limits<int64_t>::min());}, "bne, not equal"); // BNE
+    expect<bool>(true, []{return rv32_64i::blt(numeric_limits<int64_t>::min(), numeric_limits<int64_t>::max());}, "blt, less"); // BLT
+    expect<bool>(false, []{return rv32_64i::blt(numeric_limits<int64_t>::min(), numeric_limits<int64_t>::min());}, "blt, equal"); // BLT
+    expect<bool>(false, []{return rv32_64i::blt(numeric_limits<int64_t>::max(), numeric_limits<int64_t>::min());}, "blt, greater"); // BLT
+    expect<bool>(false, []{return rv32_64i::bge(numeric_limits<int64_t>::min(), numeric_limits<int64_t>::max());}, "bge, less"); // BGE
+    expect<bool>(true, []{return rv32_64i::bge(numeric_limits<int64_t>::min(), numeric_limits<int64_t>::min());}, "bge, equal"); // BGE
+    expect<bool>(true, []{return rv32_64i::bge(numeric_limits<int64_t>::max(), numeric_limits<int64_t>::min());}, "bge, greater"); // BGE
+    expect<bool>(true, []{return rv32_64i::blt(numeric_limits<int64_t>::min(), numeric_limits<int64_t>::max());}, "bltu, greater"); // BLTU
+    expect<bool>(false, []{return rv32_64i::blt(numeric_limits<int64_t>::min(), numeric_limits<int64_t>::min());}, "bltu, equal"); // BLTU
+    expect<bool>(false, []{return rv32_64i::blt(numeric_limits<int64_t>::max(), numeric_limits<int64_t>::min());}, "bltu, less"); // BLTU
+    expect<bool>(false, []{return rv32_64i::bge(numeric_limits<int64_t>::min(), numeric_limits<int64_t>::max());}, "bgeu, greater"); // BGEU
+    expect<bool>(true, []{return rv32_64i::bge(numeric_limits<int64_t>::min(), numeric_limits<int64_t>::min());}, "bgeu, equal"); // BGEU
+    expect<bool>(true, []{return rv32_64i::bge(numeric_limits<int64_t>::max(), numeric_limits<int64_t>::min());}, "bgeu, less"); // BGEU
     expect<int64_t>(7, []{return rv32_64i::load<int8_t, int64_t>(0x07);}, "lb, positive"); // LB
     expect<int64_t>(numeric_limits<int8_t>::min(), []{return rv32_64i::load<int8_t, int64_t>(0x80);}, "lb, negative"); // LB
     expect<int64_t>(1792, []{return rv32_64i::load<int16_t, int64_t>(0x0700);}, "lh, positive"); // LH
@@ -102,29 +84,29 @@ int main()
     expect<int64_t>(numeric_limits<int32_t>::min(), []{return rv32_64i::load<int32_t, int64_t>(0x80000000);}, "lw, negative"); // LW
     expect<uint64_t>(128, []{return rv32_64i::load<uint8_t, uint64_t>(0x80);}, "lbu"); // LBU
     expect<uint64_t>(32768, []{return rv32_64i::load<uint16_t, uint64_t>(0x8000);}, "lhu"); // LHU
-    expect<uint64_t>(0xFF, []{return rv32_64i::store<int8_t>(-1);}, "sb"); // SB
-    expect<uint64_t>(0xFFFF, []{return rv32_64i::store<int16_t>(-1);}, "sh"); // SH
-    expect<uint64_t>(0xFFFFFFFF, []{return rv32_64i::store<int32_t>(-1);}, "sw"); // SW
-    expect<int64_t>(1073742078, []{ADDI(int64_t, 0x3FFFFFFF, 0, 255);}, "addi"); // ADDI
-    expect<int64_t>(1, []{ADDI(uint64_t, -1, 0, 2);}, "addi, overflow"); // ADDI
-    expect<bool>(true, []{SLTI(-1, false, 0);}, "slti, true"); // SLTI
-    expect<bool>(false, []{SLTI(0, true, -1);}, "slti, false"); // SLTI
-    expect<bool>(false, []{SLTIU(-1, false, 0);}, "sltiu, false"); // SLTIU
-    expect<bool>(true, []{SLTIU(0, true, -1);}, "sltiu, true"); // SLTIU
-    expect<uint64_t>(0xFF, []{BITI("xori", 0xAA, 0, 0x55);}, "xori (1)"); // XORI
-    expect<uint64_t>(0, []{BITI("xori", 0xAA, -1, 0xAA);}, "xori (0)"); // XORI
-    expect<uint64_t>(0xFF, []{BITI("ori", 0xAA, 0, 0x55);}, "ori (1)"); // ORI
-    expect<uint64_t>(0xAA, []{BITI("ori", 0xAA, 0, 0xAA);}, "ori (A)"); // ORI
-    expect<uint64_t>(0, []{BITI("andi", -1, -1, 0);}, "andi (0)"); // ANDI
-    expect<uint64_t>(0x1234567812345678ULL, []{BITI("andi", 0x1234567812345678ULL, 0, -1);}, "andi (1)"); // ANDI
-    expect<int64_t>(65280, []{SHIFTI("slli", 255, 0, 8);}, "slli, general"); // SLLI
-    expect<int64_t>(numeric_limits<int64_t>::min(), []{SHIFTI("slli", 255, 0, 63);}, "slli, erase"); // SLLI
-    expect<int64_t>(255, []{SHIFTI("srli", 65280, 0, 8);}, "srli, general"); // SRLI
-    expect<int64_t>(0, []{SHIFTI("srli", 255, -1, 8);}, "srli, erase"); // SRLI
-    expect<int64_t>(1, []{SHIFTI("srli", std::numeric_limits<int64_t>::min(), 0, 63);}, "srli, negative"); // SRLI
-    expect<int64_t>(255, []{SHIFTI("srai", 65280, 0, 8);}, "srai, general"); // SRAI
-    expect<int64_t>(0, []{SHIFTI("srai", 255, -1, 8);}, "srai, erase"); // SRAI
-    expect<int64_t>(-1, []{SHIFTI("srai", std::numeric_limits<int64_t>::min(), 0, 63);}, "srai, negative"); // SRAI
+    expect<uint8_t>(0xFF, []{return rv32_64i::store<int8_t>(-1);}, "sb"); // SB
+    expect<uint16_t>(0xFFFF, []{return rv32_64i::store<int16_t>(-1);}, "sh"); // SH
+    expect<uint32_t>(0xFFFFFFFF, []{return rv32_64i::store<int32_t>(-1);}, "sw"); // SW
+    expect<int64_t>(1073742078, []{return rv32_64i::addi(0x3FFFFFFF, 255);}, "addi"); // ADDI
+    expect<int64_t>(1, []{return rv32_64i::addi(-1, 2);}, "addi, overflow"); // ADDI
+    expect<bool>(true, []{return rv32_64i::slti(-1, 0);}, "slti, true"); // SLTI
+    expect<bool>(false, []{return rv32_64i::slti(0, -1);}, "slti, false"); // SLTI
+    expect<bool>(false, []{return rv32_64i::sltiu(-1, 0);}, "sltiu, false"); // SLTIU
+    expect<bool>(true, []{return rv32_64i::sltiu(0, -1);}, "sltiu, true"); // SLTIU
+    expect<uint64_t>(0xFF, []{return rv32_64i::xori(0xAA, 0x55);}, "xori (1)"); // XORI
+    expect<uint64_t>(0, []{return rv32_64i::xori(0xAA, 0xAA);}, "xori (0)"); // XORI
+    expect<uint64_t>(0xFF, []{return rv32_64i::ori(0xAA, 0x55);}, "ori (1)"); // ORI
+    expect<uint64_t>(0xAA, []{return rv32_64i::ori(0xAA, 0xAA);}, "ori (A)"); // ORI
+    expect<uint64_t>(0, []{return rv32_64i::andi(-1, 0);}, "andi (0)"); // ANDI
+    expect<uint64_t>(0x1234567812345678ULL, []{return rv32_64i::andi(0x1234567812345678ULL, -1);}, "andi (1)"); // ANDI
+    expect<int64_t>(65280, []{return rv32_64i::slli(255, 8);}, "slli, general"); // SLLI
+    expect<int64_t>(numeric_limits<int64_t>::min(), []{return rv32_64i::slli(255, 63);}, "slli, erase"); // SLLI
+    expect<int64_t>(255, []{return rv32_64i::srli(65280, 8);}, "srli, general"); // SRLI
+    expect<int64_t>(0, []{return rv32_64i::srli(255, 8);}, "srli, erase"); // SRLI
+    expect<int64_t>(1, []{return rv32_64i::srli(numeric_limits<int64_t>::min(), 63);}, "srli, negative"); // SRLI
+    expect<int64_t>(255, []{return rv32_64i::srai(65280, 8);}, "srai, general"); // SRAI
+    expect<int64_t>(0, []{return rv32_64i::srai(255, 8);}, "srai, erase"); // SRAI
+    expect<int64_t>(-1, []{return rv32_64i::srai(numeric_limits<int64_t>::min(), 63);}, "srai, negative"); // SRAI
     expect<int64_t>(1073742078, []{return rv32_64i::add(0x3FFFFFFF, 255);}, "add"); // ADD
     expect<int64_t>(-1, []{return rv32_64i::add(0x7FFFFFFFFFFFFFFFLL, 0x8000000000000000LL);}, "add, overflow"); // ADD
     expect<int64_t>(65535, []{return rv32_64i::sub(65536, 1);}, "sub"); // SUB
@@ -174,20 +156,20 @@ int main()
     expect<int64_t>(0xFFFFFFFF, []{return rv32_64i::load<uint32_t, uint64_t>(-1);}, "lwu"); // LWU
     expect<int64_t>(30064771072, []{return rv32_64i::load<int64_t, int64_t>(30064771072);}, "ld"); // LD
     expect<uint64_t>(-1, []{return rv32_64i::store<int64_t>(-1);}, "sd"); // SD
-    expect<int64_t>(268435710, []{ADDIW(int32_t, 0x0FFFFFFF, 0, 255);}, "addiw"); // ADDIW
-    expect<int64_t>(-2147481602, []{ADDIW(int32_t, 0x7FFFFFFF, 0, 0x7FF);}, "addiw, overflow"); // ADDIW
-    expect<int64_t>(0, []{ADDIW(int64_t, 0x7FFFFFFFFFFFFFFFLL, -1, 1);}, "addiw, truncate"); // ADDIW
-    expect<int64_t>(65280, []{SHIFTIW("slliw", int32_t, 255, 0, 8);}, "slliw, general"); // SLLIW
-    expect<int64_t>(numeric_limits<int32_t>::min(), []{SHIFTIW("slliw", int32_t, 255, 0, 31);}, "slliw, erase"); // SLLIW
-    expect<int64_t>(numeric_limits<int32_t>::min(), []{SHIFTIW("slliw", int64_t, 0xFFFFFFFF00800000LL, 0, 8);}, "slliw, truncate"); // SLLIW
-    expect<int64_t>(255, []{SHIFTIW("srliw", int32_t, 65280, 0, 8);}, "srliw, general"); // SRLIW
-    expect<int64_t>(0, []{SHIFTIW("srliw", int32_t, 255, -1, 8);}, "srliw, erase"); // SRLIW
-    expect<int64_t>(1, []{SHIFTIW("srliw", int32_t, numeric_limits<int32_t>::min(), 0, 31);}, "srliw, negative"); // SRLIW
-    expect<int64_t>(1, []{SHIFTIW("srliw", int64_t, 0xFFFFFFFF80000000LL, 0, 31);}, "srliw, truncate"); // SRLIW
-    expect<int64_t>(255, []{SHIFTIW("sraiw", int32_t, 65280, 0, 8);}, "sraiw, general"); // SRAIW
-    expect<int64_t>(0, []{SHIFTIW("sraiw", int32_t, 255, -1, 8);}, "sraiw, erase"); // SRAIW
-    expect<int64_t>(-1, []{SHIFTIW("sraiw", int32_t, numeric_limits<int32_t>::min(), 0, 31);}, "sraiw, negative"); // SRAIW
-    expect<int64_t>(-1, []{SHIFTIW("sraiw", int64_t, 0x0000000180000000LL, 0, 31);}, "sraiw, truncate"); // SRAIW
+    expect<int64_t>(268435710, []{return rv32_64i::addiw(0x0FFFFFFF, 255);}, "addiw"); // ADDIW
+    expect<int64_t>(-2147481602, []{return rv32_64i::addiw(0x7FFFFFFF, 0x7FF);}, "addiw, overflow"); // ADDIW
+    expect<int64_t>(0, []{return rv32_64i::addiw(0x7FFFFFFFFFFFFFFFLL, 1);}, "addiw, truncate"); // ADDIW
+    expect<int64_t>(65280, []{return rv32_64i::slliw(255, 8);}, "slliw, general"); // SLLIW
+    expect<int64_t>(numeric_limits<int32_t>::min(), []{return rv32_64i::slliw(255, 31);}, "slliw, erase"); // SLLIW
+    expect<int64_t>(numeric_limits<int32_t>::min(), []{return rv32_64i::slliw(0xFFFFFFFF00800000LL, 8);}, "slliw, truncate"); // SLLIW
+    expect<int64_t>(255, []{return rv32_64i::srliw(65280, 8);}, "srliw, general"); // SRLIW
+    expect<int64_t>(0, []{return rv32_64i::srliw(255, 8);}, "srliw, erase"); // SRLIW
+    expect<int64_t>(1, []{return rv32_64i::srliw(numeric_limits<int32_t>::min(), 31);}, "srliw, negative"); // SRLIW
+    expect<int64_t>(1, []{return rv32_64i::srliw(0xFFFFFFFF80000000LL, 31);}, "srliw, truncate"); // SRLIW
+    expect<int64_t>(255, []{return rv32_64i::sraiw(65280, 8);}, "sraiw, general"); // SRAIW
+    expect<int64_t>(0, []{return rv32_64i::sraiw(255, 8);}, "sraiw, erase"); // SRAIW
+    expect<int64_t>(-1, []{return rv32_64i::sraiw(numeric_limits<int32_t>::min(), 31);}, "sraiw, negative"); // SRAIW
+    expect<int64_t>(-1, []{return rv32_64i::sraiw(0x0000000180000000LL, 31);}, "sraiw, truncate"); // SRAIW
     expect<int64_t>(1073742078, []{return rv32_64i::addw(0x3FFFFFFF, 255);}, "addw"); // ADDW
     expect<int64_t>(-1, []{return rv32_64i::addw(0x7FFFFFFF, 0x80000000);}, "addw, overflow"); // ADDW
     expect<int64_t>(65536, []{return rv32_64i::addw(0xFFFFFFFF0000FFFFLL, 1);}, "addw, truncate"); // ADDW

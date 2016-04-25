@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import argparse
 import sys
@@ -9,7 +9,7 @@ import matplotlib.animation as animation
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import matplotlib.patches as patch
-from multiprocessing import Pool
+import multiprocessing as mp
 
 from moviepy.video.io.bindings import mplfig_to_npimage
 import moviepy.editor as mpy
@@ -22,7 +22,7 @@ def getFloorPlan(floorplan, scale):
     filedata = filedata.transpose()
     header = np.genfromtxt(floorplan, dtype='str', usecols=(0))
     layout = list()
-    for i in xrange(header.shape[0]):
+    for i in range(header.shape[0]):
         width = scale * filedata[0][i]
         height = scale * filedata[1][i]
         x = scale * filedata[2][i]
@@ -144,23 +144,27 @@ vwriter = animation.FFMpegWriter(fps=2, codec='mpeg4')
 hwriter = animation.FFMpegWriter(fps=60, codec='mpeg4')
 
 
-def write_vani():
+def write_vani(q):
     ani = animation.FuncAnimation(
         figv, make_vframe, 1995, interval=1)
     ani.save('voltspot.mp4', writer=vwriter, dpi=300)
 
 
-def write_hani():
+def write_hani(q):
     ani = animation.FuncAnimation(
         figh, make_hframe, 1995, interval=1)
     ani.save('hotspot.mp4', writer=hwriter, dpi=300)
 
-
-pool = Pool()
-poolv = pool.apply_async(write_vani)
-poolh = pool.apply_async(write_hani)
-print(poolv.get())
-print(poolh.get())
+mp.set_start_method('fork')
+q = mp.Queue()
+pv = mp.Process(target=write_vani, args=(q,))
+ph = mp.Process(target=write_hani, args=(q,))
+pv.start()
+ph.start()
+print(pv.get())
+print(ph.get())
+pv.join()
+ph.join()
 
 print('Animation complete!')
 # ani.save('kmeans.gif', writer='imagemagick', dpi=100)

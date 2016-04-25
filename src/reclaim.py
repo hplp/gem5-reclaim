@@ -28,14 +28,14 @@ if __name__ == '__main__':
         'gzip -acfq --best',
         stdin=sproc.PIPE,
         stdout=open('voltspot.gridvol.gz', 'w'),
-        stderr=sproc.DEVNULL)
+        stderr=open('voltspot.gridvol.err', 'w'))
     gridvol = sman.StartTool(   # Write gridvol to file
         'gridvol',
         'tee /dev/stderr',
         stdin=sproc.PIPE,
         stdout=sproc.PIPE,
         stderr=gridvol_gz.stdin)
-    voltspot_args = 'voltspot ' + \
+    voltspot_args = '../lib/voltspot/bin/voltspot ' + \
         '-f ../config/penryn.flp ' + \
         '-p /dev/stdin ' + \
         '-c ../config/voltspot.config ' + \
@@ -59,14 +59,14 @@ if __name__ == '__main__':
         'gzip -acfq --best',
         stdin=sproc.PIPE,
         stdout=open('hotspot.gridtemp.gz', 'w'),
-        stderr=sproc.DEVNULL)
+        stderr=open('hotspot.gridtemp.err', 'w'))
     gridtemp = sman.StartTool(   # Write gridvol to file
         'gridtemp',
         'tee /dev/stderr',
         stdin=sproc.PIPE,
         stdout=sproc.PIPE,
         stderr=gridtemp_gz.stdin)
-    hotspot_args = 'hotspot ' + \
+    hotspot_args = '../lib/hotspot/hotspot ' + \
         '-f ../config/penryn.flp ' + \
         '-p /dev/stdin ' + \
         '-c ../config/hotspot.config ' + \
@@ -85,7 +85,7 @@ if __name__ == '__main__':
     print('Starting heatvideo...')
     gridvol_fd = gridvol.stdout.fileno()
     gridtemp_fd = gridtemp.stdout.fileno()
-    heatvideo_args = 'python2.7 ../src/heatvideo.py ' + \
+    heatvideo_args = 'python3 ../src/heatvideo.py ' + \
         '-f ../config/penryn.flp ' + \
         '-t /proc/%d/fd/%d ' % (self_pid, gridtemp_fd) + \
         '-v /proc/%d/fd/%d ' % (self_pid, gridvol_fd) + \

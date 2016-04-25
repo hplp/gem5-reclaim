@@ -289,7 +289,7 @@ int main()
     expect<pair<float,uint64_t>>({-numeric_limits<float>::infinity(), 0}, []{return rv32_64f::fmadd_s(3.14, -numeric_limits<float>::infinity(), 1.414);}, "fmadd.s, -infinity"); // FMADD.S
     expect<pair<float, uint64_t>>({4.28824, 0x1}, []{return rv32_64f::fmsub_s(3.14, 1.816, 1.414);}, "fmsub.s"); // FMSUB.S
     expect<pair<bool, uint64_t>>({true, 0}, []{ // FMSUB.S
-        pair<float, uint64_t> fd = rv32_64f::fmsub_s(3.14, numeric_limits<float>::quiet_NaN(), 1.414);
+        pair<float, uint64_t> fd = rv32_64f::fmsub_s(3.14, numeric_limits<float>::quiet_NaN(), 1.816);
         return pair<bool, uint64_t>(rv32_64f::isquietnan(fd.first), fd.second);
     }, "fmsub.s, quiet NaN");
     expect<pair<bool, uint64_t>>({true, 0x10}, []{ // FMSUB.S
@@ -412,7 +412,7 @@ int main()
         return pair<bool, uint64_t>(rv32_64f::issignalingnan(fd.first), fd.second);
     }, "fsgnj.s, signaling NaN");
     expect<pair<float, uint64_t>>({4.0, 0}, []{return rv32_64f::fsgnj_s(4.0, numeric_limits<float>::quiet_NaN());}, "fsgnj.s, inject NaN"); // FSGNJ.S
-    expect<pair<float, uint64_t>>({-4.0, 0}, []{return rv32_64f::fsgnj_s(4.0, -numeric_limits<float>::quiet_NaN());}, "fsgnj.s, inject NaN"); // FSGNJ.S
+    expect<pair<float, uint64_t>>({-4.0, 0}, []{return rv32_64f::fsgnj_s(4.0, -numeric_limits<float>::quiet_NaN());}, "fsgnj.s, inject -NaN"); // FSGNJ.S
     expect<pair<float, uint64_t>>({-1.0, 0}, []{return rv32_64f::fsgnjn_s(1.0, 25.0);}, "fsgnjn.s, ++"); // FSGNJN.S
     expect<pair<float, uint64_t>>({1.0, 0}, []{return rv32_64f::fsgnjn_s(1.0, -25.0);}, "fsgnjn.s, +-"); // FSGNJN.S
     expect<pair<float, uint64_t>>({-1.0, 0}, []{return rv32_64f::fsgnjn_s(-1.0, 25.0);}, "fsgnjn.s, -+"); // FSGNJN.S

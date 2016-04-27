@@ -921,18 +921,40 @@ int main()
     expect<double>(-numeric_limits<float>::infinity(), []{return rv32_64d::fmv_d_x(0xFFF0000000000000ULL);}, "fmv.d.x"); // FMV.D.X
 
     // Extra tests
-    expect<double>({0.0, 0}, []{
+    expect<pair<double, uint64_t>>({1.0, 0x11}, []{
         float a = 25.0;
         float b = 75.0;
-        float c = 1.0;
+        double c = 1.0;
         double d = 0.0;
-        asm("fadd.s f3,%1,%2;
-             fadd.d %0,%3,f3;"
-             : "=r" (d)
-             : "r" (a), "r" (b), "r" (c)
-             : "f3");
+        asm volatile("fadd.s ft0,%1,%2;"
+                     "fadd.d %0,%3,ft0;"
+                     : "=f" (d)
+                     : "f" (a), "f" (b), "f" (c)
+                     : "ft0");
         return pair<float, uint64_t>(c, rv32_64f::frflags());
     }, "float + double");
+    expect<pair<float, uint64_t>>({0.0, 0x11}, []{
+        double a = 100.0;
+        double b = 0.0;
+        float m = 0.0;
+        asm volatile("fadd.d ft0,%1,%2;"
+                     "fsw ft0,%0;"
+                     : "=m" (m)
+                     : "f" (a), "f" (b)
+                     : "ft0");
+        return pair<float, uint64_t>(m, rv32_64f::frflags());
+    }, "fsw double");
+    expect<pair<double, uint64_t>>({rv32_64d::number(0x0000000042C80000ULL), 0x11}, []{
+        float a = 100.0;
+        float b = 0.0;
+        double m = 0.0;
+        asm volatile("fadd.s ft0,%1,%2;"
+                     "fsd ft0,%0;"
+                     : "=m" (m)
+                     : "f" (a), "f" (b)
+                     : "ft0");
+        return pair<double, uint64_t>(m, rv32_64f::frflags());
+    }, "fsd float");
 
     cout << passes << " tests passed; " << failures << " failed." << endl;
 

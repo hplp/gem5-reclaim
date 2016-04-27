@@ -920,6 +920,20 @@ int main()
     expect<double>(rv32_64d::number(0x43EFFFFFFFE00000), []{return rv32_64d::fcvt_d_lu(0xFFFFFFFF000000FFLL);}, "fcvt.d.lu, 32-bit truncate"); // FCVT.D.LU
     expect<double>(-numeric_limits<float>::infinity(), []{return rv32_64d::fmv_d_x(0xFFF0000000000000ULL);}, "fmv.d.x"); // FMV.D.X
 
+    // Extra tests
+    expect<double>({0.0, 0}, []{
+        float a = 25.0;
+        float b = 75.0;
+        float c = 1.0;
+        double d = 0.0;
+        asm("fadd.s f3,%1,%2;
+             fadd.d %0,%3,f3;"
+             : "=r" (d)
+             : "r" (a), "r" (b), "r" (c)
+             : "f3");
+        return pair<float, uint64_t>(c, rv32_64f::frflags());
+    }, "float + double");
+
     cout << passes << " tests passed; " << failures << " failed." << endl;
 
     return 0;

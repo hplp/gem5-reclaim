@@ -1,12 +1,16 @@
 [submodule "lib/voltspot"]
 	path = lib/voltspot
 	url = git@github.com:meltonbw/voltspot.git
+	branch = master
 [submodule "lib/hotspot"]
 	path = lib/hotspot
 	url = git@github.com:meltonbw/hotspot.git
+	branch = master
 [submodule "lib/mcpat-riscv"]
 	path = lib/mcpat-riscv
 	url = git@github.com:meltonbw/mcpat-riscv.git
+	branch = master
 [submodule "lib/gem5-riscv"]
 	path = lib/gem5-riscv
 	url = git@github.com:meltonbw/gem5-riscv.git
+	branch = master

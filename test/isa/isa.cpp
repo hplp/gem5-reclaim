@@ -289,7 +289,7 @@ int main()
     expect<pair<float,uint64_t>>({-numeric_limits<float>::infinity(), 0}, []{return rv32_64f::fmadd_s(3.14, -numeric_limits<float>::infinity(), 1.414);}, "fmadd.s, -infinity"); // FMADD.S
     expect<pair<float, uint64_t>>({4.28824, 0x1}, []{return rv32_64f::fmsub_s(3.14, 1.816, 1.414);}, "fmsub.s"); // FMSUB.S
     expect<pair<bool, uint64_t>>({true, 0}, []{ // FMSUB.S
-        pair<float, uint64_t> fd = rv32_64f::fmsub_s(3.14, numeric_limits<float>::quiet_NaN(), 1.414);
+        pair<float, uint64_t> fd = rv32_64f::fmsub_s(3.14, numeric_limits<float>::quiet_NaN(), 1.816);
         return pair<bool, uint64_t>(rv32_64f::isquietnan(fd.first), fd.second);
     }, "fmsub.s, quiet NaN");
     expect<pair<bool, uint64_t>>({true, 0x10}, []{ // FMSUB.S
@@ -412,7 +412,7 @@ int main()
         return pair<bool, uint64_t>(rv32_64f::issignalingnan(fd.first), fd.second);
     }, "fsgnj.s, signaling NaN");
     expect<pair<float, uint64_t>>({4.0, 0}, []{return rv32_64f::fsgnj_s(4.0, numeric_limits<float>::quiet_NaN());}, "fsgnj.s, inject NaN"); // FSGNJ.S
-    expect<pair<float, uint64_t>>({-4.0, 0}, []{return rv32_64f::fsgnj_s(4.0, -numeric_limits<float>::quiet_NaN());}, "fsgnj.s, inject NaN"); // FSGNJ.S
+    expect<pair<float, uint64_t>>({-4.0, 0}, []{return rv32_64f::fsgnj_s(4.0, -numeric_limits<float>::quiet_NaN());}, "fsgnj.s, inject -NaN"); // FSGNJ.S
     expect<pair<float, uint64_t>>({-1.0, 0}, []{return rv32_64f::fsgnjn_s(1.0, 25.0);}, "fsgnjn.s, ++"); // FSGNJN.S
     expect<pair<float, uint64_t>>({1.0, 0}, []{return rv32_64f::fsgnjn_s(1.0, -25.0);}, "fsgnjn.s, +-"); // FSGNJN.S
     expect<pair<float, uint64_t>>({-1.0, 0}, []{return rv32_64f::fsgnjn_s(-1.0, 25.0);}, "fsgnjn.s, -+"); // FSGNJN.S
@@ -919,6 +919,42 @@ int main()
     expect<double>(rv32_64d::number(0x43E0000000000000), []{return rv32_64d::fcvt_d_lu(numeric_limits<int64_t>::min());}, "fcvt.d.lu"); // FCVT.D.LU
     expect<double>(rv32_64d::number(0x43EFFFFFFFE00000), []{return rv32_64d::fcvt_d_lu(0xFFFFFFFF000000FFLL);}, "fcvt.d.lu, 32-bit truncate"); // FCVT.D.LU
     expect<double>(-numeric_limits<float>::infinity(), []{return rv32_64d::fmv_d_x(0xFFF0000000000000ULL);}, "fmv.d.x"); // FMV.D.X
+
+    // Extra tests
+    expect<pair<double, uint64_t>>({1.0, 0x11}, []{
+        float a = 25.0;
+        float b = 75.0;
+        double c = 1.0;
+        double d = 0.0;
+        asm volatile("fadd.s ft0,%1,%2;"
+                     "fadd.d %0,%3,ft0;"
+                     : "=f" (d)
+                     : "f" (a), "f" (b), "f" (c)
+                     : "ft0");
+        return pair<float, uint64_t>(c, rv32_64f::frflags());
+    }, "float + double");
+    expect<pair<float, uint64_t>>({0.0, 0x11}, []{
+        double a = 100.0;
+        double b = 0.0;
+        float m = 0.0;
+        asm volatile("fadd.d ft0,%1,%2;"
+                     "fsw ft0,%0;"
+                     : "=m" (m)
+                     : "f" (a), "f" (b)
+                     : "ft0");
+        return pair<float, uint64_t>(m, rv32_64f::frflags());
+    }, "fsw double");
+    expect<pair<double, uint64_t>>({rv32_64d::number(0x0000000042C80000ULL), 0x11}, []{
+        float a = 100.0;
+        float b = 0.0;
+        double m = 0.0;
+        asm volatile("fadd.s ft0,%1,%2;"
+                     "fsd ft0,%0;"
+                     : "=m" (m)
+                     : "f" (a), "f" (b)
+                     : "ft0");
+        return pair<double, uint64_t>(m, rv32_64f::frflags());
+    }, "fsd float");
 
     cout << passes << " tests passed; " << failures << " failed." << endl;
 

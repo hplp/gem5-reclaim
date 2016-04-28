@@ -9,14 +9,14 @@
 
 namespace rv32_64f
 {
-    constexpr inline uint32_t bits(const float f)
+    constexpr inline uint32_t bits(float f)
     {
-        return *((uint32_t*)&f);
+        return reinterpret_cast<uint32_t&>(f);
     }
 
-    constexpr inline float number(const uint32_t b)
+    constexpr inline float number(uint32_t b)
     {
-        return *((float*)&b);
+        return reinterpret_cast<float&>(b);
     }
 
     inline bool isquietnan(float f)

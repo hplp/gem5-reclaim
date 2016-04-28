@@ -7,14 +7,14 @@
 
 namespace rv32_64d
 {
-    constexpr inline uint64_t bits(const double d)
+    constexpr inline uint64_t bits(double d)
     {
-        return *((uint64_t*)&d);
+        return reinterpret_cast<uint64_t&>(d);
     }
 
-    constexpr inline double number(const uint64_t b)
+    constexpr inline double number(uint64_t b)
     {
-        return *((double*)&b);
+        return reinterpret_cast<double&>(b);
     }
 
     inline bool isquietnan(double f)

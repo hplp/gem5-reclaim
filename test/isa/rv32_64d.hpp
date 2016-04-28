@@ -5,6 +5,8 @@
 #include <tuple>
 #include "rv32_64f.hpp"
 
+#include <cstdio>
+
 namespace rv32_64d
 {
     constexpr inline uint64_t bits(double d)

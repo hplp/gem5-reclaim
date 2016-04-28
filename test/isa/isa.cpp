@@ -499,6 +499,7 @@ int main()
     expect<uint64_t>(0xFFFFFFFF80000000ULL, []{return rv32_64f::fmv_x_s(-0.0);}, "fmv.x.s, -0.0"); // FMV.X.S
     expect<pair<bool, uint64_t>>({true, 0}, []{return rv32_64f::feq_s(1.414, 1.414);}, "feq.s, equal"); // FEQ.S
     expect<pair<bool, uint64_t>>({false, 0}, []{return rv32_64f::feq_s(2.718, 1.816);}, "feq.s, not equal"); // FEQ.S
+    expect<pair<bool, uint64_t>>({true, 0}, []{return rv32_64f::feq_s(0.0, -0.0);}, "feq.s, 0 == -0"); // FEQ.S
     expect<pair<bool, uint64_t>>({false, 0}, []{return rv32_64f::feq_s(numeric_limits<float>::quiet_NaN(), -1.0);}, "feq.s, quiet NaN first"); // FEQ.S
     expect<pair<bool, uint64_t>>({false, 0}, []{return rv32_64f::feq_s(2.0, numeric_limits<float>::quiet_NaN());}, "feq.s, quiet NaN second"); // FEQ.S
     expect<pair<bool, uint64_t>>({false, 0}, []{return rv32_64f::feq_s(numeric_limits<float>::quiet_NaN(), numeric_limits<float>::quiet_NaN());}, "feq.s, quiet NaN both"); // FEQ.S
@@ -517,6 +518,7 @@ int main()
     expect<pair<bool, uint64_t>>({true, 0}, []{return rv32_64f::fle_s(1.414, 1.414);}, "fle.s, equal"); // FLE.S
     expect<pair<bool, uint64_t>>({true, 0}, []{return rv32_64f::fle_s(1.816, 2.718);}, "fle.s, less"); // FLE.S
     expect<pair<bool, uint64_t>>({false, 0}, []{return rv32_64f::fle_s(2.718, 1.816);}, "fle.s, greater"); // FLE.S
+    expect<pair<bool, uint64_t>>({true, 0}, []{return rv32_64f::fle_s(0.0, -0.0);}, "fle.s, 0 == -0"); // FLE.S
     expect<pair<bool, uint64_t>>({false, 0x10}, []{return rv32_64f::fle_s(numeric_limits<float>::quiet_NaN(), -1.0);}, "fle.s, quiet NaN first"); // FLE.S
     expect<pair<bool, uint64_t>>({false, 0x10}, []{return rv32_64f::fle_s(2.0, numeric_limits<float>::quiet_NaN());}, "fle.s, quiet NaN second"); // FLE.S
     expect<pair<bool, uint64_t>>({false, 0x10}, []{return rv32_64f::fle_s(numeric_limits<float>::quiet_NaN(), numeric_limits<float>::quiet_NaN());}, "fle.s, quiet NaN both"); // FLE.S
@@ -599,7 +601,7 @@ int main()
     // RV32D extension
     // TODO: rounding mode
     expect<double>(3.1415926, []{return rv32_64d::load(3.1415926);}, "fld"); // FLD
-    expect<float>(1.61803398875, []{return rv32_64d::store(1.61803398875);}, "fsd"); // FSD
+    expect<double>(1.61803398875, []{return rv32_64d::store(1.61803398875);}, "fsd"); // FSD
     expect<pair<double, uint64_t>>({rv32_64d::number(0x4019FD5AED13B1CEULL), 0x1}, []{return rv32_64d::fmadd_d(3.1415926, 1.61803398875, 1.41421356237);}, "fmadd.d"); // FMADD.D
     expect<pair<bool, uint64_t>>({true, 0}, []{ // FMADD.D
         pair<double, uint64_t> fd = rv32_64d::fmadd_d(numeric_limits<double>::quiet_NaN(), 3.14, 1.816);
@@ -729,7 +731,7 @@ int main()
     expect<pair<double, uint64_t>>({-1.0, 0}, []{return rv32_64d::fsgnj_d(-1.0, -25.0);}, "fsgnj.d, --"); // FSGNJ.D
     expect<pair<bool, uint64_t>>({true, 0}, []{ // FSGNJ.D
         pair<double, uint64_t> fd = rv32_64d::fsgnj_d(numeric_limits<double>::quiet_NaN(), -4.0);
-        return pair<bool, uint64_t>(rv32_64f::isquietnan(fd.first), fd.second);
+        return pair<bool, uint64_t>(rv32_64d::isquietnan(fd.first), fd.second);
     }, "fsgnj.d, quiet NaN");
     expect<pair<bool, uint64_t>>({true, 0}, []{ // FSGNJ.D
         pair<double, uint64_t> fd = rv32_64d::fsgnj_d(numeric_limits<double>::signaling_NaN(), -4.0);
@@ -820,6 +822,7 @@ int main()
     expect<pair<double, uint64_t>>({numeric_limits<double>::infinity(), 0}, []{return rv32_64d::fcvt_d_s(numeric_limits<float>::infinity());}, "fcvt.d.s, infinity"); // FCVT.D.S
     expect<pair<bool, uint64_t>>({true, 0}, []{return rv32_64d::feq_d(1.414, 1.414);}, "feq.d, equal"); // FEQ.D
     expect<pair<bool, uint64_t>>({false, 0}, []{return rv32_64d::feq_d(2.718, 1.816);}, "feq.d, not equal"); // FEQ.D
+    expect<pair<bool, uint64_t>>({true, 0}, []{return rv32_64d::feq_d(0.0, -0.0);}, "feq.d, 0 == -0"); // FEQ.D
     expect<pair<bool, uint64_t>>({false, 0}, []{return rv32_64d::feq_d(numeric_limits<double>::quiet_NaN(), -1.0);}, "feq.d, quiet NaN first"); // FEQ.D
     expect<pair<bool, uint64_t>>({false, 0}, []{return rv32_64d::feq_d(2.0, numeric_limits<double>::quiet_NaN());}, "feq.d, quiet NaN second"); // FEQ.D
     expect<pair<bool, uint64_t>>({false, 0}, []{return rv32_64d::feq_d(numeric_limits<double>::quiet_NaN(), numeric_limits<double>::quiet_NaN());}, "feq.d, quiet NaN both"); // FEQ.D
@@ -838,6 +841,7 @@ int main()
     expect<pair<bool, uint64_t>>({true, 0}, []{return rv32_64d::fle_d(1.414, 1.414);}, "fle.d, equal"); // FLE.D
     expect<pair<bool, uint64_t>>({true, 0}, []{return rv32_64d::fle_d(1.816, 2.718);}, "fle.d, less"); // FLE.D
     expect<pair<bool, uint64_t>>({false, 0}, []{return rv32_64d::fle_d(2.718, 1.816);}, "fle.d, greater"); // FLE.D
+    expect<pair<bool, uint64_t>>({true, 0}, []{return rv32_64d::fle_d(0.0, -0.0);}, "fle.d, 0 == -0"); // FLE.D
     expect<pair<bool, uint64_t>>({false, 0x10}, []{return rv32_64d::fle_d(numeric_limits<double>::quiet_NaN(), -1.0);}, "fle.d, quiet NaN first"); // FLE.D
     expect<pair<bool, uint64_t>>({false, 0x10}, []{return rv32_64d::fle_d(2.0, numeric_limits<double>::quiet_NaN());}, "fle.d, quiet NaN second"); // FLE.D
     expect<pair<bool, uint64_t>>({false, 0x10}, []{return rv32_64d::fle_d(numeric_limits<double>::quiet_NaN(), numeric_limits<double>::quiet_NaN());}, "fle.d, quiet NaN both"); // FLE.D
@@ -955,6 +959,19 @@ int main()
                      : "ft0");
         return pair<double, uint64_t>(m, rv32_64f::frflags());
     }, "fsd float");
+    expect<pair<float, double>>({100.0, rv32_64d::number(0x0000000042C80000ULL)}, []{
+        float a = 100.0;
+        float b = 0.0;
+        double m = 0.0;
+        float c = 0.0;
+        asm volatile("fadd.s ft0,%2,%3;"
+                     "fsd ft0,%1;"
+                     "fld %0,%1;"
+                     : "=f" (c), "+m" (m)
+                     : "f" (a), "f" (b)
+                     : "ft0");
+        return pair<float, double>(c, m);
+    }, "reload fsd float");
 
     cout << passes << " tests passed; " << failures << " failed." << endl;
 

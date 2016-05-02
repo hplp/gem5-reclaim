@@ -54,24 +54,34 @@ int main(int argc, char* argv[])
 {
     using namespace std;
 
-    string set = string(argv[1]);
-
-    int size = stoi(set.substr(2, 2));
-    bool I = true;
+    int size = 64;
+    bool I = false;
     bool M = false;
     bool A = false;
     bool F = false;
     bool D = false;
-    for (char c: set.substr(4))
+    if (argc < 2)
     {
-        if (c == 'm' || c == 'M')
-            M = true;
-        if (c == 'a' || c == 'A')
-            A = true;
-        if (c == 'f' || c == 'F')
-            F = true;
-        if (c == 'd' || c == 'D')
-            D = true;
+        size = 64;
+        I = M = A = F = D = true;
+    }
+    else
+    {
+        string set = string(argv[1]);
+        size = stoi(set.substr(2, 2));
+        for (char c: set.substr(4))
+        {
+            if (c == 'i' || c == 'I')
+                I = true;
+            if (c == 'm' || c == 'M')
+                M = true;
+            if (c == 'a' || c == 'A')
+                A = true;
+            if (c == 'f' || c == 'F')
+                F = true;
+            if (c == 'd' || c == 'D')
+                D = true;
+        }
     }
 
     if (I)

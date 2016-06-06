@@ -8,12 +8,12 @@ class SimManager:
     def __init__(self):
         self.procs = dict()
 
-    def StartTool(self, name, command, stdin=None, stdout=None, stderr=None):
+    def StartTool(self, name, command, cwd='./', stdin=None, stdout=None, stderr=None):
         if name in self.procs:
             print('Process with name: ' + name + ', already exists!')
             return None
         args = shlex.split(command)
-        s = sproc.Popen(args, stdin=stdin, stdout=stdout, stderr=stderr)
+        s = sproc.Popen(args, cwd=cwd, stdin=stdin, stdout=stdout, stderr=stderr)
         self.procs[name] = s
         return s
 

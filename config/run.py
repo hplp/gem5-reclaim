@@ -53,10 +53,10 @@ parser.add_argument("--stop-at-tick", type=int, default=2**64 - 1,
         metavar="TICK", help="stop simulation after some number of ticks, including those from a restored checkpoint")
 parser.add_argument("--caches", action="store_true",
         help="simulate L1 caches")
-parser.add_argument("--icache", nargs=2, default=["32kB", "2"],
-        metavar=("SIZE","ASSOC"), help="instruction cache parameters")
-parser.add_argument("--dcache", nargs=2, default=["64kB", "2"],
-        metavar=("SIZE","ASSOC"), help="data cache parameters")
+parser.add_argument("--icache", nargs=3, default=["32kB", "2", "64"],
+        metavar=("SIZE","ASSOC", "TLB_ENTRIES"), help="instruction cache parameters")
+parser.add_argument("--dcache", nargs=3, default=["64kB", "2", "64"],
+        metavar=("SIZE","ASSOC", "TLB_ENTRIES"), help="data cache parameters")
 parser.add_argument("--icache-extra", nargs=4, type=int, default=[2, 2, 4, 20],
         metavar=("HIT_LATENCY","RESPONSE_LATENCY","MSHRS","TGTS_PER_MSHR"), help="extra parameters for icache")
 parser.add_argument("--dcache-extra", nargs=4, type=int, default=[2, 2, 4, 20],
@@ -75,6 +75,8 @@ parser.add_argument("--rocket-chip", type=argparse.FileType('r'),
         metavar="CONFIG", help="configure the system like rocket chip from a config file")
 args = parser.parse_args()
 
+fw = 1
+rw = 1
 if args.rocket_chip:
     for line in args.rocket_chip:
         if line.strip()[0] != '#':
@@ -84,10 +86,16 @@ if args.rocket_chip:
                     print("SMT is not compatible with multicore")
                     sys.exit(1)
                 args.num_cpus = int(value)
-            elif key == "CACHE_BLOCK_BYTES":
-                args.cacheline_size = int(value)
+            elif key == "N_MEM_CHANNELS":
+                args.mem_channels = int(value)
             elif key == "NBANKS_PER_MEM_CHANNEL":
                 args.mem_ranks = int(value)
+            elif key == "FETCH_WIDTH":
+                fw = int(value)
+            elif key == "RETIRE_WIDTH":
+                rw = int(value)
+            elif key == "CACHE_BLOCK_BYTES":
+                args.cacheline_size = int(value)
             elif key == "L1D_MSHRS":
                 args.caches = True
                 args.dcache_extra[2] = int(value)
@@ -97,12 +105,18 @@ if args.rocket_chip:
             elif key == "L1D_SETS":
                 args.caches = True
                 args.dcache[0] = value
+            elif key == "DTLB_ENTRIES":
+                args.caches = True
+                args.dcache[2] = value
             elif key == "L1I_WAYS":
                 args.caches = True
                 args.icache[1] = value
             elif key == "L1I_SETS":
                 args.caches = True
                 args.icache[0] = value
+            elif key == "ITLB_ENTRIES":
+                args.caches = True
+                args.icache[2] = value
             elif key == "L1I_BUFFER_WAYS":
                 pass
             elif key == "L2_CAPACITY_IN_KB":
@@ -132,19 +146,16 @@ if cpu_types[args.cpu_type] == m5.objects.DerivO3CPU and not args.caches:
     print("Detailed CPU model requires caches. Using default data and instruction cache parameters.")
     args.caches = True
 
-
 process = []
 for cmd in args.command:
     line = []
     cmd = cmd.lstrip()
     start = 0
-    for i in xrange(1, len(cmd)):
-        if cmd[i].isspace() and cmd[i - 1] != '\\':
-            if not cmd[start].isspace() or cmd[start] == '\\':
-                line.append(cmd[start:i])
+    for i in xrange(1, len(cmd) + 1):
+        if cmd[i - 1].isspace() and cmd[i - 2] != '\\':
             start = i
-        if i == len(cmd) - 1 and (not cmd[i].isspace() or cmd[i - 1] == '\\'):
-            line.append(cmd[start:])
+        if (i == len(cmd) or (cmd[i].isspace() and cmd[i] != '\\')) and (not cmd[start].isspace() and cmd[start - 1] != '\\'):
+            line.append(cmd[start:i])
     exe = line[0]
     arg = []
     stdin = None
@@ -157,10 +168,22 @@ for cmd in args.command:
         elif line[i - 1] == '>' or line[i - 1] == "1>":
             arg.pop()
             stdout = line[i]
+        elif line[i - 1] == ">>" or line[i - 1] == "1>>":
+            print("Warning: stdout redirect in append mode is not supported. Using truncate mode instead ('>')")
+            arg.pop()
+            stdout = line[i]
         elif line[i - 1] == "2>":
             arg.pop()
             stderr = line[i]
+        elif line[i - 1] == "2>>":
+            print("Warning: stderr redirect in append mode is not supported. Using truncate mode instead ('2>')")
+            arg.pop()
+            stderr = line[i]
         elif line[i - 1] == "&>":
+            arg.pop()
+            stderr = stdout = line[i]
+        elif line[i - 1] == "&>>":
+            print("Warning: stdout redirect in append mode is not supported. Using truncate mode instead ('&>')")
             arg.pop()
             stderr = stdout = line[i]
         else:
@@ -175,6 +198,8 @@ for cmd in args.command:
 
 cpu_type = cpu_types[args.fast_cpu if args.fast_forward else args.cpu_type]
 cpu_type.numThreads = args.num_threads
+cpu_type.dtb.size = int(args.dcache[2])
+cpu_type.itb.size = int(args.icache[2])
 if cpu_type == m5.objects.DerivO3CPU:
     if args.num_threads > 1:
         cpu_type.numPhysIntRegs *= args.num_threads
@@ -183,14 +208,14 @@ if cpu_type == m5.objects.DerivO3CPU:
         cpu_type.numROBEntries *= args.num_threads
         cpu_type.smtFetchPolicy = args.fetch_policy
     if args.rocket_chip:
-        cpu_type.commitWidth = 1
+        cpu_type.commitWidth = rw
         cpu_type.decodeWidth = 1
         cpu_type.dispatchWidth = 1
-        cpu_type.fetchWidth = 1
+        cpu_type.fetchWidth = fw
         cpu_type.issueWidth = 1
         cpu_type.numRobs = 1
         cpu_type.renameWidth = 1
-        cpu_type.wbWidth = 1
+        cpu_type.wbWidth = rw
 system = m5.objects.System(cpu=[cpu_type(cpu_id=i) for i in xrange(args.num_cpus)],
                            mem_mode=cpu_type.memory_mode(),
                            mem_ranges=[m5.objects.AddrRange(args.mem_size)])
@@ -263,6 +288,8 @@ root = m5.objects.Root(full_system=False, system=system)
 
 if args.fast_forward:
     cpu_types[args.cpu_type].numThreads = args.num_threads
+    cpu_types[args.cpu_type].dtb.size = int(args.dcache[2])
+    cpu_types[args.cpu_type].itb.size = int(args.icache[2])
     if cpu_types[args.cpu_type] == m5.objects.DerivO3CPU:
         if args.num_threads > 1:
             cpu_types[args.cpu_type].numPhysIntRegs *= args.num_threads
@@ -271,14 +298,14 @@ if args.fast_forward:
             cpu_types[args.cpu_type].numROBEntries *= args.num_threads
             cpu_types[args.cpu_type].smtFetchPolicy = args.fetch_policy
         if args.rocket_chip:
-            cpu_type.commitWidth = 1
+            cpu_type.commitWidth = rw
             cpu_type.decodeWidth = 1
             cpu_type.dispatchWidth = 1
-            cpu_type.fetchWidth = 1
+            cpu_type.fetchWidth = fw
             cpu_type.issueWidth = 1
             cpu_type.numRobs = 1
             cpu_type.renameWidth = 1
-            cpu_type.wbWidth = 1
+            cpu_type.wbWidth = rw
     system.switch_cpus = [cpu_types[args.cpu_type](switched_out=True, cpu_id=i) for i in xrange(args.num_cpus)]
     for i in xrange(args.num_cpus):
         system.cpu[i].max_insts_any_thread = args.fast_forward

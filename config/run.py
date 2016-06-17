@@ -33,12 +33,10 @@ workload_group.add_argument("-t", "--num-threads", type=int, default=1,
         help="number of threads to run on one cpu")
 parser.add_argument("-m", "--mem-size", default="512MB",
         help="physical memory size")
-parser.add_argument("--mem-channels", type=int, default=1,
-        help="number of memory channels")
-parser.add_argument("--mem-ranks", type=int,
-        help="number of ranks per memory channel")
 parser.add_argument("--mem-type", nargs='?', choices=sorted(mem_types.keys()), default="DDR3_1600_x64",
         metavar="MEM_TYPE", help="type of memory to use (pass no argument to list available memory types)")
+parser.add_argument("--fastmem", action="store_true",
+        help="use fast memory model")
 parser.add_argument("--cacheline-size", type=int, default=64,
         help="size of cache line in bytes")
 parser.add_argument("-f", "--cpu-frequency", default="2GHz",
@@ -53,10 +51,14 @@ parser.add_argument("--stop-at-tick", type=int, default=2**64 - 1,
         metavar="TICK", help="stop simulation after some number of ticks, including those from a restored checkpoint")
 parser.add_argument("--caches", action="store_true",
         help="simulate L1 caches")
-parser.add_argument("--icache", nargs=3, default=["32kB", "2", "64"],
-        metavar=("SIZE","ASSOC", "TLB_ENTRIES"), help="instruction cache parameters")
-parser.add_argument("--dcache", nargs=3, default=["64kB", "2", "64"],
-        metavar=("SIZE","ASSOC", "TLB_ENTRIES"), help="data cache parameters")
+parser.add_argument("--icache", nargs=2, default=["32kB", "2"],
+        metavar=("SIZE","ASSOC"), help="instruction cache parameters")
+parser.add_argument("--itlb-entries", type=int, default=64,
+        help="number of entries in the instruction TLB")
+parser.add_argument("--dcache", nargs=2, default=["64kB", "2"],
+        metavar=("SIZE","ASSOC"), help="data cache parameters")
+parser.add_argument("--dtlb-entries", type=int, default=64,
+        help="number of entries in the data TLB")
 parser.add_argument("--icache-extra", nargs=4, type=int, default=[2, 2, 4, 20],
         metavar=("HIT_LATENCY","RESPONSE_LATENCY","MSHRS","TGTS_PER_MSHR"), help="extra parameters for icache")
 parser.add_argument("--dcache-extra", nargs=4, type=int, default=[2, 2, 4, 20],
@@ -68,83 +70,129 @@ parser.add_argument("--l2-extra", nargs=5, type=int, default=[20, 20, 20, 12, 8]
 parser.add_argument("--fetch-policy", choices=["singlethread", "roundrobin", "branch", "iqcount", "lsqcount"], default="roundrobin", type=str.lower,
         help="SMT thread-fetching policy")
 parser.add_argument("-F", "--fast-forward", type=int, default=None,
-        metavar="INSTS", help="fast-forward using a simple CPU model until a thread has executed enough instructions, and then switch to a more complex one")
+        metavar="INSTRUCTIONS", help="fast-forward using a simple CPU model until a thread has executed enough instructions, and then switch to a more complex one")
+parser.add_argument("--max-instructions", type=int, default=None,
+        help="simulate some instructions and then exit.  When used with fast-forward, only instructions simulated by the second CPU model will count")
 parser.add_argument("--fast-cpu", choices=sorted(cpu_types.keys()), default="atomic",
         help="CPU type to use for fast-forward mode")
-parser.add_argument("--rocket-chip", type=argparse.FileType('r'),
-        metavar="CONFIG", help="configure the system like rocket chip from a config file")
+parser.add_argument("--simpoint-interval", type=int, default=None,
+        metavar="INSTRUCTIONS", help="set instruction interval for simpoint analysis, and enable basic block vector generation if --run-simpoint is not present")
+parser.add_argument("--run-simpoint", nargs=3,
+        metavar=("SIMPOINTS_FILE", "WEIGHTS_FILE", "CLUSTER_ID"), help="simulate a simpoint with the given cluster ID from the given simpoints and weights files, then exit")
+parser.add_argument("--config-from-file", nargs='?', default='',
+        help="get CPU configuration from file (use no argument to see compatible parameters)")
 args = parser.parse_args()
-
-fw = 1
-rw = 1
-if args.rocket_chip:
-    for line in args.rocket_chip:
-        if line.strip()[0] != '#':
-            (key, value) = (s.strip() for s in line.split('=', 1))
-            if key == "NTILES":
-                if args.num_threads > 1:
-                    print("SMT is not compatible with multicore")
-                    sys.exit(1)
-                args.num_cpus = int(value)
-            elif key == "N_MEM_CHANNELS":
-                args.mem_channels = int(value)
-            elif key == "NBANKS_PER_MEM_CHANNEL":
-                args.mem_ranks = int(value)
-            elif key == "FETCH_WIDTH":
-                fw = int(value)
-            elif key == "RETIRE_WIDTH":
-                rw = int(value)
-            elif key == "CACHE_BLOCK_BYTES":
-                args.cacheline_size = int(value)
-            elif key == "L1D_MSHRS":
-                args.caches = True
-                args.dcache_extra[2] = int(value)
-            elif key == "L1D_WAYS":
-                args.cache = True
-                args.dcache[1] = value
-            elif key == "L1D_SETS":
-                args.caches = True
-                args.dcache[0] = value
-            elif key == "DTLB_ENTRIES":
-                args.caches = True
-                args.dcache[2] = value
-            elif key == "L1I_WAYS":
-                args.caches = True
-                args.icache[1] = value
-            elif key == "L1I_SETS":
-                args.caches = True
-                args.icache[0] = value
-            elif key == "ITLB_ENTRIES":
-                args.caches = True
-                args.icache[2] = value
-            elif key == "L1I_BUFFER_WAYS":
-                pass
-            elif key == "L2_CAPACITY_IN_KB":
-                if args.l2cache:
-                    args.l2cache[0] = value + "kB"
-                else:
-                    args.l2cache = [value + "kB", "1"]
-            elif key == "L2_WAYS":
-                if args.l2cache:
-                    args.l2cache[1] = value
-                else:
-                    args.l2cache = ["2048kB", value]
-            elif key == "L2_SPLIT_METADATA":
-                pass
-    args.dcache[0] = str(args.cacheline_size*int(args.dcache[0])*int(args.dcache[1])) + "B"
-    args.icache[0] = str(args.cacheline_size*int(args.icache[0])*int(args.icache[1])) + "B"
 
 if not args.mem_type:
     print("Available memory types:\n\t" + "\n\t".join(sorted(mem_types.keys())))
+    sys.exit(0)
+
+if args.config_from_file == None:
+    print("Config file parameters:")
+    print("\tNTILES or NCORES")
+    print("\tN_MEM_CHANNELS")
+    print("\tNBANKS_PER_MEM_CHANNEL")
+    print("\tFETCH_WIDTH")
+    print("\tRETIRE_WIDTH")
+    print("\tCACHE_BLOCK_BYTES")
+    print("\tL1D_MSHRS")
+    print("\tL1D_WAYS")
+    print("\tL1D_SETS")
+    print("\tDTLB_ENTRIES")
+    print("\tL1I_WAYS")
+    print("\tL1I_SETS")
+    print("\tITLB_ENTRIES")
+    print("\tL2_CAPACITY_IN_KB")
+    print("\tL2_WAYS")
     sys.exit(0)
 
 if not args.command:
     print("No workload specified!")
     sys.exit(1)
 
+fw = 1
+rw = 1
+if args.config_from_file:
+    with open(args.config_from_file, 'r') as config:
+        for line in config:
+            if line.strip()[0] != '#':
+                (key, value) = (s.strip() for s in line.split('=', 1))
+                if key == "NTILES" or key == "NCORES":
+                    if args.num_threads > 1:
+                        print("SMT is not compatible with multicore")
+                        sys.exit(1)
+                    args.num_cpus = int(value)
+                elif key == "N_MEM_CHANNELS":
+                    args.mem_channels = int(value)
+                elif key == "NBANKS_PER_MEM_CHANNEL":
+                    args.mem_ranks = int(value)
+                elif key == "FETCH_WIDTH":
+                    fw = int(value)
+                elif key == "RETIRE_WIDTH":
+                    rw = int(value)
+                elif key == "CACHE_BLOCK_BYTES":
+                    args.cacheline_size = int(value)
+                elif key == "L1D_MSHRS":
+                    args.caches = True
+                    args.dcache_extra[2] = int(value)
+                elif key == "L1D_WAYS":
+                    args.cache = True
+                    args.dcache[1] = value
+                elif key == "L1D_SETS":
+                    args.caches = True
+                    args.dcache[0] = value
+                elif key == "DTLB_ENTRIES":
+                    args.dtlb_entries = int(value)
+                elif key == "L1I_WAYS":
+                    args.caches = True
+                    args.icache[1] = value
+                elif key == "L1I_SETS":
+                    args.caches = True
+                    args.icache[0] = value
+                elif key == "ITLB_ENTRIES":
+                    args.itlb_entries = int(value)
+                elif key == "L1I_BUFFER_WAYS":
+                    pass
+                elif key == "L2_CAPACITY_IN_KB":
+                    if args.l2cache:
+                        args.l2cache[0] = value + "kB"
+                    else:
+                        args.l2cache = [value + "kB", "1"]
+                elif key == "L2_WAYS":
+                    if args.l2cache:
+                        args.l2cache[1] = value
+                    else:
+                        args.l2cache = ["2048kB", value]
+                elif key == "L2_SPLIT_METADATA":
+                    pass
+        args.dcache[0] = str(args.cacheline_size*int(args.dcache[0])*int(args.dcache[1])) + "B"
+        args.icache[0] = str(args.cacheline_size*int(args.icache[0])*int(args.icache[1])) + "B"
+
 if cpu_types[args.cpu_type] == m5.objects.DerivO3CPU and not args.caches:
     print("Detailed CPU model requires caches. Using default data and instruction cache parameters.")
     args.caches = True
+
+if args.run_simpoint:
+    if not args.simpoint_interval:
+        print("No simpoint interval specified!")
+        sys.exit(1)
+    else:
+        with open(args.run_simpoint[0], 'r') as simpoints_file, open(args.run_simpoint[1], 'r') as weights_file:
+            simpoints = {}
+            for line in simpoints_file:
+                s = [int(n) for n in line.strip().split()]
+                simpoints[s[1]] = s[0]
+            weights = {}
+            for line in weights_file:
+                w = line.strip().split()
+                weights[int(w[1])] = float(w[0])
+            if set(simpoints) != set(weights):
+                print("warning: inconsistent cluster ID's for simpoints and weights.")
+
+            simpoint = simpoints[int(args.run_simpoint[2])]
+            simpoint_insts = simpoint*args.simpoint_interval
+            args.fast_forward = simpoint_insts
+            args.max_instructions = args.simpoint_interval
 
 process = []
 for cmd in args.command:
@@ -197,25 +245,22 @@ for cmd in args.command:
         process[-1].errout = stderr
 
 cpu_type = cpu_types[args.fast_cpu if args.fast_forward else args.cpu_type]
+if cpu_type != m5.objects.AtomicSimpleCPU:
+    if args.fastmem:
+        print("warning: fastmem is only compatible with the atomic CPU model.  Disabling fastmem.")
+        args.fastmem = False
+    if not args.fastmem and (args.simpoint_interval and not args.run_simpoint):
+        print("warning: simpoint profiling should only be done with the atomic CPU model.  Disabling simpoint profiling.")
+        args.simpoint_interval = None
 cpu_type.numThreads = args.num_threads
-cpu_type.dtb.size = int(args.dcache[2])
-cpu_type.itb.size = int(args.icache[2])
-if cpu_type == m5.objects.DerivO3CPU:
-    if args.num_threads > 1:
-        cpu_type.numPhysIntRegs *= args.num_threads
-        cpu_type.numPhysFloatRegs *= args.num_threads
-        cpu_type.numPhysCCRegs *= args.num_threads
-        cpu_type.numROBEntries *= args.num_threads
-        cpu_type.smtFetchPolicy = args.fetch_policy
-    if args.rocket_chip:
-        cpu_type.commitWidth = rw
-        cpu_type.decodeWidth = 1
-        cpu_type.dispatchWidth = 1
-        cpu_type.fetchWidth = fw
-        cpu_type.issueWidth = 1
-        cpu_type.numRobs = 1
-        cpu_type.renameWidth = 1
-        cpu_type.wbWidth = rw
+cpu_type.itb.size = args.itlb_entries
+cpu_type.dtb.size = args.dtlb_entries
+if args.num_threads > 1 and cpu_type == m5.objects.DerivO3CPU:
+    cpu_type.numPhysIntRegs *= args.num_threads
+    cpu_type.numPhysFloatRegs *= args.num_threads
+    cpu_type.numPhysCCRegs *= args.num_threads
+    cpu_type.numROBEntries *= args.num_threads
+    cpu_type.smtFetchPolicy = args.fetch_policy
 system = m5.objects.System(cpu=[cpu_type(cpu_id=i) for i in xrange(args.num_cpus)],
                            mem_mode=cpu_type.memory_mode(),
                            mem_ranges=[m5.objects.AddrRange(args.mem_size)])
@@ -255,6 +300,13 @@ if args.l2cache:
     system.l2.cpu_side = system.tol2bus.master
     system.l2.mem_side = system.membus.slave
 for cpu in system.cpu:
+    if args.fastmem:
+        cpu.fastmem = True
+    if args.simpoint_interval:
+        cpu.addSimPointProbe(args.simpoint_interval)
+    if args.max_instructions and not args.fast_forward:
+        cpu.max_insts_all_threads = args.max_instructions
+
     if args.caches:
         icache = m5.objects.Cache(size=args.icache[0], assoc=int(args.icache[1]),
                 hit_latency=args.icache_extra[0], response_latency=args.icache_extra[1], mshrs=args.icache_extra[2], tgts_per_mshr=args.icache_extra[3],
@@ -272,9 +324,7 @@ for r in system.mem_ranges:
     intlv_low_bit = math.log(max(128, system.cache_line_size.value), 2)
     mem_ctrls.append(mem_types[args.mem_type]())
     if issubclass(mem_types[args.mem_type], m5.objects.DRAMCtrl):
-        mem_ctrls[-1].channels = args.mem_channels
-        if args.mem_ranks:
-            mem_ctrls[-1].ranks_per_channel = args.mem_ranks
+        mem_ctrls[-1].channels = 1
         if mem_ctrls[-1].addr_mapping.value == "RoRaBaChCo":
             intlv_low_bit = int(math.log(mem_ctrls[-1].device_rowbuffer_size.value*mem_ctrls[-1].devices_per_rank.value, 2))
     mem_ctrls[-1].range = m5.objects.AddrRange(r.start, size=r.size(), intlvHighBit=intlv_low_bit - 1, xorHighBit=19, intlvBits=0, intlvMatch=1)
@@ -288,24 +338,12 @@ root = m5.objects.Root(full_system=False, system=system)
 
 if args.fast_forward:
     cpu_types[args.cpu_type].numThreads = args.num_threads
-    cpu_types[args.cpu_type].dtb.size = int(args.dcache[2])
-    cpu_types[args.cpu_type].itb.size = int(args.icache[2])
-    if cpu_types[args.cpu_type] == m5.objects.DerivO3CPU:
-        if args.num_threads > 1:
-            cpu_types[args.cpu_type].numPhysIntRegs *= args.num_threads
-            cpu_types[args.cpu_type].numPhysFloatRegs *= args.num_threads
-            cpu_types[args.cpu_type].numPhysCCRegs *= args.num_threads
-            cpu_types[args.cpu_type].numROBEntries *= args.num_threads
-            cpu_types[args.cpu_type].smtFetchPolicy = args.fetch_policy
-        if args.rocket_chip:
-            cpu_type.commitWidth = rw
-            cpu_type.decodeWidth = 1
-            cpu_type.dispatchWidth = 1
-            cpu_type.fetchWidth = fw
-            cpu_type.issueWidth = 1
-            cpu_type.numRobs = 1
-            cpu_type.renameWidth = 1
-            cpu_type.wbWidth = rw
+    if args.num_threads > 1 and cpu_types[args.cpu_type] == m5.objects.DerivO3CPU:
+        cpu_types[args.cpu_type].numPhysIntRegs *= args.num_threads
+        cpu_types[args.cpu_type].numPhysFloatRegs *= args.num_threads
+        cpu_types[args.cpu_type].numPhysCCRegs *= args.num_threads
+        cpu_types[args.cpu_type].numROBEntries *= args.num_threads
+        cpu_types[args.cpu_type].smtFetchPolicy = args.fetch_policy
     system.switch_cpus = [cpu_types[args.cpu_type](switched_out=True, cpu_id=i) for i in xrange(args.num_cpus)]
     for i in xrange(args.num_cpus):
         system.cpu[i].max_insts_any_thread = args.fast_forward
@@ -314,9 +352,8 @@ if args.fast_forward:
         system.switch_cpus[i].clk_domain = system.cpu[i].clk_domain
         system.switch_cpus[i].progress_interval = system.cpu[i].progress_interval
         system.switch_cpus[i].createThreads()
+        system.switch_cpus[i].max_insts_all_threads = args.max_instructions
 
-if args.rocket_chip:
-    args.rocket_chip.close()
 m5.instantiate(None)
 if args.fast_forward:
     exit_event = m5.simulate(args.stop_at_tick)

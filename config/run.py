@@ -115,7 +115,7 @@ rw = 1
 if args.config_from_file:
     with open(args.config_from_file, 'r') as config:
         for line in config:
-            if line.strip()[0] != '#':
+            if line.strip() and line.strip()[0] != '#':
                 (key, value) = (s.strip() for s in line.split('=', 1))
                 if key == "NTILES" or key == "NCORES":
                     if args.num_threads > 1:
@@ -151,8 +151,6 @@ if args.config_from_file:
                     args.icache[0] = value
                 elif key == "ITLB_ENTRIES":
                     args.itlb_entries = int(value)
-                elif key == "L1I_BUFFER_WAYS":
-                    pass
                 elif key == "L2_CAPACITY_IN_KB":
                     if args.l2cache:
                         args.l2cache[0] = value + "kB"
@@ -163,8 +161,6 @@ if args.config_from_file:
                         args.l2cache[1] = value
                     else:
                         args.l2cache = ["2048kB", value]
-                elif key == "L2_SPLIT_METADATA":
-                    pass
         args.dcache[0] = str(args.cacheline_size*int(args.dcache[0])*int(args.dcache[1])) + "B"
         args.icache[0] = str(args.cacheline_size*int(args.icache[0])*int(args.icache[1])) + "B"
 

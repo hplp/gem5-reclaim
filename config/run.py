@@ -3,6 +3,7 @@ import sys
 import os
 import math
 import m5
+import shlex
 
 cpu_types = {"atomic": m5.objects.AtomicSimpleCPU,
              "timing": m5.objects.TimingSimpleCPU,
@@ -192,14 +193,7 @@ if args.run_simpoint:
 
 process = []
 for cmd in args.command:
-    line = []
-    cmd = cmd.lstrip()
-    start = 0
-    for i in xrange(1, len(cmd) + 1):
-        if cmd[i - 1].isspace() and cmd[i - 2] != '\\':
-            start = i
-        if (i == len(cmd) or (cmd[i].isspace() and cmd[i] != '\\')) and (not cmd[start].isspace() and cmd[start - 1] != '\\'):
-            line.append(cmd[start:i])
+    line = shlex.split(cmd)
     exe = line[0]
     arg = []
     stdin = None

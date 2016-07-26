@@ -206,14 +206,10 @@ for cmd in args.command:
     line = shlex.split(cmd)
     for i in xrange(len(line)):
         if line[i][0] == '~':
-            try:
-                if len(line[i]) > 1 and line[i][1] == '/':
-                    line[i] = os.environ["HOME"] + line[i][1:]
-                elif len(word) == 1:
-                    line[i] = os.environ["HOME"]
-            except KeyError:
-                pass
-        print(line[i])
+            if len(line[i]) > 1 and line[i][1] == '/':
+                line[i] = os.getenv("HOME", '~') + line[i][1:]
+            elif len(word) == 1:
+                line[i] = os.getenv("HOME", '~')
     exe = line[0]
     arg = []
     stdin = None

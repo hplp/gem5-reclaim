@@ -7,6 +7,7 @@ import shlex
 
 cpu_types = {"atomic": m5.objects.AtomicSimpleCPU,
              "timing": m5.objects.TimingSimpleCPU,
+             "minor": m5.objects.MinorCPU,
              "detailed": m5.objects.DerivO3CPU}
 mem_types = {"GDDR5_4000_x64": m5.objects.GDDR5_4000_x64,
 	     "HMC_2500_x32": m5.objects.HMC_2500_x32,
@@ -72,6 +73,8 @@ parser.add_argument("--fetch-policy", choices=["singlethread", "roundrobin", "br
         help="SMT thread-fetching policy")
 parser.add_argument("-F", "--fast-forward", type=int, default=None,
         metavar="INSTRUCTIONS", help="fast-forward using a simple CPU model until a thread has executed enough instructions, and then switch to a more complex one")
+parser.add_argument("--inorder", action="store_true",
+        help="configure a detailed CPU to execute instructions in order")
 parser.add_argument("--max-instructions", type=int, default=None,
         help="simulate some instructions and then exit.  When used with fast-forward, only instructions simulated by the second CPU model will count")
 parser.add_argument("--fast-cpu", choices=sorted(cpu_types.keys()), default="atomic",
@@ -90,29 +93,30 @@ if not args.mem_type:
 
 if args.config_from_file == None:
     print("Config file parameters:")
-    print("\tNTILES or NCORES")
-    print("\tN_MEM_CHANNELS")
-    print("\tNBANKS_PER_MEM_CHANNEL")
-    print("\tFETCH_WIDTH")
-    print("\tRETIRE_WIDTH")
-    print("\tCACHE_BLOCK_BYTES")
-    print("\tL1D_MSHRS")
-    print("\tL1D_WAYS")
-    print("\tL1D_SETS")
-    print("\tDTLB_ENTRIES")
-    print("\tL1I_WAYS")
-    print("\tL1I_SETS")
-    print("\tITLB_ENTRIES")
-    print("\tL2_CAPACITY_IN_KB")
-    print("\tL2_WAYS")
+    print("\tNTILES=<N> or NCORES<N>")
+    print("\tN_MEM_CHANNELS=<N>")
+    print("\tNBANKS_PER_MEM_CHANNEL=<N>")
+    print("\tFETCH_WIDTH=<N>")
+    print("\tRETIRE_WIDTH=<N>")
+    print("\tCACHE_BLOCK_BYTES=<N>")
+    print("\tL1D_MSHRS=<N>")
+    print("\tL1D_WAYS=<N>")
+    print("\tL1D_SETS=<N>")
+    print("\tDTLB_ENTRIES=<N>")
+    print("\tL1I_WAYS=<N>")
+    print("\tL1I_SETS=<N>")
+    print("\tITLB_ENTRIES=<N>")
+    print("\tL2_CAPACITY_IN_KB=<N>")
+    print("\tL2_WAYS=<N>")
+    print("\tINORDER=<true/false>")
     sys.exit(0)
 
 if not args.command:
     print("No workload specified!")
     sys.exit(1)
 
-fw = 1
-rw = 1
+fw = 8
+rw = 8
 if args.config_from_file:
     with open(args.config_from_file, 'r') as config:
         for line in config:
@@ -162,12 +166,16 @@ if args.config_from_file:
                         args.l2cache[1] = value
                     else:
                         args.l2cache = ["2048kB", value]
+                elif key == "INORDER":
+                    args.inorder = value == "true"
         args.dcache[0] = str(args.cacheline_size*int(args.dcache[0])*int(args.dcache[1])) + "B"
         args.icache[0] = str(args.cacheline_size*int(args.icache[0])*int(args.icache[1])) + "B"
 
-if cpu_types[args.cpu_type] == m5.objects.DerivO3CPU and not args.caches:
+if cpu_types[args.cpu_type] == cpu_types["detailed"] and not args.caches:
     print("Detailed CPU model requires caches. Using default data and instruction cache parameters.")
     args.caches = True
+if args.inorder and not cpu_types[args.cpu_type] == cpu_types["detailed"]:
+    print(args.cpu_type + " CPU is already inorder.")
 
 if args.run_simpoint:
     if not args.simpoint_interval:
@@ -192,8 +200,20 @@ if args.run_simpoint:
             args.max_instructions = args.simpoint_interval
 
 process = []
+if '~' in args.command and not os.environ.get("HOME"):
+    print("warning: $HOME not set")
 for cmd in args.command:
     line = shlex.split(cmd)
+    for i in xrange(len(line)):
+        if line[i][0] == '~':
+            try:
+                if len(line[i]) > 1 and line[i][1] == '/':
+                    line[i] = os.environ["HOME"] + line[i][1:]
+                elif len(word) == 1:
+                    line[i] = os.environ["HOME"]
+            except KeyError:
+                pass
+        print(line[i])
     exe = line[0]
     arg = []
     stdin = None
@@ -207,21 +227,21 @@ for cmd in args.command:
             arg.pop()
             stdout = line[i]
         elif line[i - 1] == ">>" or line[i - 1] == "1>>":
-            print("Warning: stdout redirect in append mode is not supported. Using truncate mode instead ('>')")
+            print("warning: stdout redirect in append mode is not supported. Using truncate mode instead ('>')")
             arg.pop()
             stdout = line[i]
         elif line[i - 1] == "2>":
             arg.pop()
             stderr = line[i]
         elif line[i - 1] == "2>>":
-            print("Warning: stderr redirect in append mode is not supported. Using truncate mode instead ('2>')")
+            print("warning: stderr redirect in append mode is not supported. Using truncate mode instead ('2>')")
             arg.pop()
             stderr = line[i]
         elif line[i - 1] == "&>":
             arg.pop()
             stderr = stdout = line[i]
         elif line[i - 1] == "&>>":
-            print("Warning: stdout redirect in append mode is not supported. Using truncate mode instead ('&>')")
+            print("warning: stdout redirect in append mode is not supported. Using truncate mode instead ('&>')")
             arg.pop()
             stderr = stdout = line[i]
         else:
@@ -234,6 +254,24 @@ for cmd in args.command:
     if stderr:
         process[-1].errout = stderr
 
+cpu_types["detailed"].fetchWidth = fw
+cpu_types["detailed"].decodeWidth = fw
+cpu_types["detailed"].wbWidth = rw
+cpu_types["detailed"].commitWidth = rw
+if args.inorder:
+    cpu_types["detailed"].renameWidth = 1
+    cpu_types["detailed"].dispatchWidth = 1
+    cpu_types["detailed"].issueWidth = 1
+    cpu_types["detailed"].squashWidth = 1
+    cpu_types["detailed"].numRobs = 1
+    cpu_types["detailed"].numROBEntries = 1
+if args.num_threads > 1:
+    cpu_types["detailed"].numPhysIntRegs *= args.num_threads
+    cpu_types["detailed"].numPhysFloatRegs *= args.num_threads
+    cpu_types["detailed"].numPhysCCRegs *= args.num_threads
+    cpu_types["detailed"].numROBEntries *= args.num_threads
+    cpu_types["detailed"].smtFetchPolicy = args.fetch_policy
+
 cpu_type = cpu_types[args.fast_cpu if args.fast_forward else args.cpu_type]
 if cpu_type != m5.objects.AtomicSimpleCPU:
     if args.fastmem:
@@ -245,12 +283,6 @@ if cpu_type != m5.objects.AtomicSimpleCPU:
 cpu_type.numThreads = args.num_threads
 cpu_type.itb.size = args.itlb_entries
 cpu_type.dtb.size = args.dtlb_entries
-if args.num_threads > 1 and cpu_type == m5.objects.DerivO3CPU:
-    cpu_type.numPhysIntRegs *= args.num_threads
-    cpu_type.numPhysFloatRegs *= args.num_threads
-    cpu_type.numPhysCCRegs *= args.num_threads
-    cpu_type.numROBEntries *= args.num_threads
-    cpu_type.smtFetchPolicy = args.fetch_policy
 system = m5.objects.System(cpu=[cpu_type(cpu_id=i) for i in xrange(args.num_cpus)],
                            mem_mode=cpu_type.memory_mode(),
                            mem_ranges=[m5.objects.AddrRange(args.mem_size)])
@@ -328,12 +360,6 @@ root = m5.objects.Root(full_system=False, system=system)
 
 if args.fast_forward:
     cpu_types[args.cpu_type].numThreads = args.num_threads
-    if args.num_threads > 1 and cpu_types[args.cpu_type] == m5.objects.DerivO3CPU:
-        cpu_types[args.cpu_type].numPhysIntRegs *= args.num_threads
-        cpu_types[args.cpu_type].numPhysFloatRegs *= args.num_threads
-        cpu_types[args.cpu_type].numPhysCCRegs *= args.num_threads
-        cpu_types[args.cpu_type].numROBEntries *= args.num_threads
-        cpu_types[args.cpu_type].smtFetchPolicy = args.fetch_policy
     system.switch_cpus = [cpu_types[args.cpu_type](switched_out=True, cpu_id=i) for i in xrange(args.num_cpus)]
     for i in xrange(args.num_cpus):
         system.cpu[i].max_insts_any_thread = args.fast_forward
@@ -342,7 +368,8 @@ if args.fast_forward:
         system.switch_cpus[i].clk_domain = system.cpu[i].clk_domain
         system.switch_cpus[i].progress_interval = system.cpu[i].progress_interval
         system.switch_cpus[i].createThreads()
-        system.switch_cpus[i].max_insts_all_threads = args.max_instructions
+        if args.max_instructions:
+            system.switch_cpus[i].max_insts_all_threads = args.max_instructions
 
 m5.instantiate(None)
 if args.fast_forward:
